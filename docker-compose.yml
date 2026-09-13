@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: seedance-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: seedance
+      POSTGRES_USER: seedance
+      POSTGRES_PASSWORD: seedance_dev
+    ports:
+      - "5434:5432"
+    volumes:
+      - seedance_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U seedance -d seedance"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  seedance_postgres_data:

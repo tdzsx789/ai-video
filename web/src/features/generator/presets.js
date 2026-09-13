@@ -1,0 +1,33 @@
+export const PRESETS = [
+  {
+    id: 'draft',
+    tag: 'DRAFT',
+    title: '快速预览',
+    value: '4 秒 · 480P',
+    description: '适合快速验证镜头与动作',
+    duration: 4,
+    resolution: '480P',
+    promptExtend: false,
+  },
+  {
+    id: 'studio',
+    tag: 'STUDIO',
+    title: '平衡输出',
+    value: '5 秒 · 720P',
+    description: '日常创作的推荐配置',
+    duration: 5,
+    resolution: '720P',
+    promptExtend: true,
+    recommended: true,
+  },
+  {
+    id: 'detail',
+    tag: 'DETAIL',
+    title: '细节优先',
+    value: '8 秒 · 1080P',
+    description: '需要更长镜头与清晰画面的场景',
+    duration: 8,
+    resolution: '1080P',
+    promptExtend: true,
+  },
+];
