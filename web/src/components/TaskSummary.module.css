@@ -1,0 +1,250 @@
+.summaryCard {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 21, 17, 0.93);
+  box-shadow: var(--shadow);
+}
+
+.summaryCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--line);
+}
+
+.summaryCard h2 {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 24px;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.summaryStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.statusPillDot {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.statusPillLoading {
+  color: var(--lime);
+  background: rgba(130, 229, 27, 0.1);
+}
+
+.statusPillSuccess {
+  color: var(--cyan);
+  background: rgba(84, 217, 255, 0.1);
+}
+
+.statusPillDanger {
+  color: var(--red);
+  background: rgba(255, 76, 82, 0.1);
+}
+
+.statusPillNeutral {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.taskVisual {
+  position: relative;
+  display: grid;
+  min-height: 231px;
+  margin: 17px 0 14px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(130, 229, 27, 0.09), transparent 42%),
+    #080b08;
+}
+
+.taskVisual::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(205, 222, 205, 0.065) 1px, transparent 1px),
+    linear-gradient(rgba(205, 222, 205, 0.065) 1px, transparent 1px);
+  background-size: 26px 26px;
+  content: "";
+}
+
+.taskVisual::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 125px;
+  height: 125px;
+  background: rgba(130, 229, 27, 0.09);
+  clip-path: polygon(100% 0, 100% 100%, 0 0);
+  content: "";
+}
+
+.taskVisual video {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  background: #000;
+}
+
+.taskVisualPlaceholder {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 11px;
+  padding: 22px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 12px;
+}
+
+.taskVisualLoading .taskVisualPlaceholder {
+  color: var(--lime);
+}
+
+.resultActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.summaryBlock {
+  display: grid;
+  gap: 0;
+  padding: 2px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.summaryLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 44px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.summaryLine + .summaryLine {
+  border-top: 1px solid var(--line-soft);
+}
+
+.summaryLine strong {
+  display: block;
+  min-width: 0;
+  max-width: 69%;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monoText {
+  font-family: var(--mono);
+  font-size: 10px !important;
+}
+
+.summaryPrompt {
+  padding: 16px 0;
+}
+
+.summaryPromptLabel {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--lime);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.summaryPrompt p {
+  display: -webkit-box;
+  margin: 9px 0 0;
+  overflow: hidden;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.summarySubmitButton {
+  grid-column: auto;
+}
+
+@media (max-width: 860px) {
+  .summaryCard {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 0.7fr);
+    gap: 0 18px;
+  }
+
+  .summaryCardHeader,
+  .taskVisual,
+  .resultActions,
+  .summaryBlock,
+  .summaryPrompt,
+  .summarySubmitButton {
+    grid-column: 1 / -1;
+  }
+
+  .summaryCardHeader {
+    grid-row: 1;
+  }
+
+  .taskVisual {
+    grid-row: 2;
+  }
+
+  .resultActions {
+    grid-row: 3;
+  }
+
+  .summaryBlock {
+    grid-row: 4;
+  }
+
+  .summaryPrompt {
+    grid-row: 5;
+  }
+
+  .summarySubmitButton {
+    grid-row: 6;
+  }
+}
+
+@media (max-width: 620px) {
+  .summaryCard {
+    display: block;
+    padding: 17px;
+  }
+}

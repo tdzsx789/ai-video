@@ -1,0 +1,269 @@
+import { config } from '../config/env.js';
+import { resolveApiKey } from './seedanceClient.js';
+
+const stylePrompts = {
+  cinematic: '电影感光影，真实镜头语言，细腻景深，高级调色。',
+  editorial: '杂志大片构图，精致排版感，干净背景，强视觉主次。',
+  illustration: '高完成度插画风格，清晰线条，丰富细节，色彩协调。',
+  product: '产品棚拍质感，黑色或深色商业摄影背景，精致轮廓光，材质细节清晰。',
+};
+
+const ratioPrompts = {
+  '1:1': '方形构图。',
+  '4:3': '横向 4:3 构图。',
+  '16:9': '宽屏 16:9 构图。',
+  '9:16': '竖屏 9:16 构图。',
+};
+
+const ratioSizes = {
+  '1:1': '1024x1024',
+  '4:3': '1536x1024',
+  '16:9': '1536x1024',
+  '9:16': '1024x1536',
+};
+
+function requestHeaders(apiKey) {
+  return {
+    Authorization: `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+async function requestJson(url, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs || 120_000);
+
+  try {
+    const response = await fetch(url, {
+      method: options.method || 'GET',
+      headers: options.headers,
+      body: options.body,
+      signal: controller.signal,
+    });
+    const raw = await response.text();
+    let data = raw;
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      // Preserve non-JSON upstream responses for error summaries.
+    }
+
+    return {
+      ok: response.ok,
+      status: response.status,
+      data,
+      raw,
+      url,
+      headers: Object.fromEntries(response.headers.entries()),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function normalizeImageUrl(value) {
+  if (!value) return '';
+  if (typeof value === 'object') return normalizeImageUrl(value.url || value.href);
+  return String(value).trim();
+}
+
+function dataUrlFromBase64(value) {
+  const base64 = String(value || '').trim();
+  if (!base64) return '';
+  if (base64.startsWith('data:image/')) return base64;
+  return `data:image/png;base64,${base64}`;
+}
+
+function extractImageValue(value, depth = 0) {
+  if (!value || depth > 7) return null;
+
+  if (typeof value === 'string') {
+    const text = value.trim();
+    if (text.startsWith('data:image/')) return { imageUrl: text, source: 'data-url' };
+
+    try {
+      const parsed = JSON.parse(text);
+      return extractImageValue(parsed, depth + 1);
+    } catch {
+      // Continue with regex extraction.
+    }
+
+    const markdownImage = text.match(/!\[[^\]]*]\((https?:\/\/[^)\s]+)\)/i);
+    if (markdownImage?.[1]) return { imageUrl: markdownImage[1], source: 'markdown-url' };
+
+    const url = text.match(/https?:\/\/\S+/i)?.[0]?.replace(/[),.，。]+$/, '');
+    if (url) return { imageUrl: url, source: 'text-url' };
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = extractImageValue(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  if (typeof value === 'object') {
+    const url = normalizeImageUrl(value.url || value.image_url || value.imageUrl);
+    if (url) return { imageUrl: url, source: 'url' };
+
+    const base64 = value.b64_json || value.base64 || value.image_base64 || value.imageBase64;
+    if (base64) return { imageUrl: dataUrlFromBase64(base64), source: 'base64' };
+
+    for (const key of ['data', 'choices', 'message', 'content', 'output', 'result']) {
+      const found = extractImageValue(value[key], depth + 1);
+      if (found) return found;
+    }
+
+    for (const item of Object.values(value)) {
+      const found = extractImageValue(item, depth + 1);
+      if (found) return found;
+    }
+  }
+
+  return null;
+}
+
+function upstreamErrorMessage(data, raw) {
+  if (data?.error?.message) return data.error.message;
+  if (typeof data?.error === 'string') return data.error;
+  if (data?.message) return data.message;
+  if (typeof raw === 'string' && raw.trim()) return raw.trim();
+  return '';
+}
+
+function errorSummary(response, payload = {}) {
+  const source = `${JSON.stringify(response?.data || {})}\n${response?.raw || ''}`;
+  const message = upstreamErrorMessage(response?.data, response?.raw);
+
+  if (/Invalid token|Unauthorized|401|api key/i.test(source)) {
+    return {
+      code: 'InvalidToken',
+      title: '鉴权失败',
+      message: 'API Key 无效或已失效，请检查服务端 OPENAI_NEXT_API_KEY 或用户中心临时密钥。',
+    };
+  }
+
+  if (/model|ModelNotOpen|not activated/i.test(source)) {
+    return {
+      code: 'ImageModelUnavailable',
+      title: '图片模型不可用',
+      message: `当前账号暂不可用 ${payload.model || config.imageModel}，请确认模型已开通。`,
+    };
+  }
+
+  return {
+    code: `HTTP_${response?.status || 500}`,
+    title: '图片生成失败',
+    message: message || `图片接口返回 HTTP ${response?.status || 500}。`,
+  };
+}
+
+function shouldTryChatFallback(response) {
+  const source = `${JSON.stringify(response?.data || {})}\n${response?.raw || ''}`;
+  if ([404, 405].includes(Number(response?.status))) return true;
+  return Number(response?.status) === 400 && /(unsupported|not found|unknown endpoint|images\/generations)/i.test(source);
+}
+
+export function normalizeImagePayload(input = {}) {
+  const prompt = String(input.prompt || '').trim();
+  if (!prompt) {
+    const error = new Error('请先填写图片提示词。');
+    error.status = 400;
+    throw error;
+  }
+
+  const style = stylePrompts[input.style] ? input.style : 'product';
+  const ratio = ratioSizes[input.ratio] ? input.ratio : '1:1';
+  const model = String(input.model || config.imageModel || 'gpt-image-2.5').trim();
+
+  return {
+    model,
+    prompt,
+    style,
+    ratio,
+    size: ratioSizes[ratio],
+  };
+}
+
+export function buildImagePrompt(payload) {
+  return [
+    payload.prompt,
+    stylePrompts[payload.style],
+    ratioPrompts[payload.ratio],
+    '画面主体明确，避免文字、水印、低清晰度和畸形结构。',
+  ].filter(Boolean).join('\n');
+}
+
+export async function createImage(apiKey, payload) {
+  const key = resolveApiKey(apiKey);
+  if (!key) throw new Error('缺少 API Key，请在页面输入或配置 OPENAI_NEXT_API_KEY。');
+
+  const prompt = buildImagePrompt(payload);
+  const upstreamPayload = {
+    model: payload.model,
+    prompt,
+    n: 1,
+    size: payload.size,
+  };
+
+  let response = await requestJson(`${config.drawBaseUrl}/v1/images/generations`, {
+    method: 'POST',
+    headers: requestHeaders(key),
+    body: JSON.stringify(upstreamPayload),
+    timeoutMs: 120_000,
+  });
+
+  if (!response.ok && shouldTryChatFallback(response)) {
+    response = await requestJson(`${config.drawBaseUrl}/v1/chat/completions`, {
+      method: 'POST',
+      headers: requestHeaders(key),
+      body: JSON.stringify({
+        model: payload.model,
+        stream: false,
+        messages: [
+          { role: 'system', content: 'You are a helpful image generation assistant. Return the generated image result.' },
+          { role: 'user', content: prompt },
+        ],
+      }),
+      timeoutMs: 120_000,
+    });
+  }
+
+  if (!response.ok) {
+    return {
+      ...response,
+      error: errorSummary(response, payload),
+    };
+  }
+
+  const extracted = extractImageValue(response.data);
+  if (!extracted?.imageUrl) {
+    return {
+      ...response,
+      ok: false,
+      status: 502,
+      error: {
+        code: 'ImageResultMissing',
+        title: '图片结果缺失',
+        message: '图片接口已返回，但没有找到可展示的图片地址或 base64 数据。',
+      },
+    };
+  }
+
+  return {
+    ...response,
+    result: {
+      imageUrl: extracted.imageUrl,
+      source: extracted.source,
+      model: payload.model,
+      size: payload.size,
+      ratio: payload.ratio,
+      prompt: payload.prompt,
+      revisedPrompt: response.data?.data?.[0]?.revised_prompt || response.data?.revised_prompt || '',
+      createdAt: new Date().toISOString(),
+    },
+    error: null,
+  };
+}

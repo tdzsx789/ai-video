@@ -1,0 +1,30 @@
+.statusBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text-soft);
+  background: rgba(17, 21, 17, 0.82);
+  font-size: 13px;
+}
+
+.statusLoading {
+  border-color: rgba(130, 229, 27, 0.38);
+  color: var(--lime);
+  background: rgba(130, 229, 27, 0.08);
+}
+
+.statusSuccess {
+  border-color: rgba(84, 217, 255, 0.36);
+  color: var(--cyan);
+  background: rgba(84, 217, 255, 0.07);
+}
+
+.statusDanger {
+  border-color: rgba(255, 76, 82, 0.36);
+  color: var(--red);
+  background: rgba(255, 76, 82, 0.07);
+}

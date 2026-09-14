@@ -1,104 +1,122 @@
-import { Check, ChevronDown, Image, Sparkles } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import SectionHeading from '../../components/SectionHeading.jsx';
-import { PRESETS } from './presets.js';
+import StepBadge from '../../components/StepBadge.jsx';
+import shared from '../../styles/shared.module.css';
+import styles from './GeneratorForm.module.css';
+
+export const AI_TOOLS = [
+  {
+    id: 'seedance',
+    label: 'seedance',
+    models: [
+      'doubao-seedance-2-5-260628',
+      'doubao-seedance-2-0-fast-260128',
+      'doubao-seedance-2-0-mini-260615',
+    ],
+  },
+  {
+    id: 'kling',
+    label: '可灵2.6',
+    models: [
+      'kling-v2-6/std/10',
+      'kling-v2-6-video',
+      'kling-v2-6/pro/10',
+      'kling-v2-6-video-pro',
+    ],
+  },
+  {
+    id: 'hailuo',
+    label: '海螺2.3',
+    models: [
+      'MiniMax-Hailuo-2.3-Fast/768p/6s',
+      'MiniMax-Hailuo-2.3-Fast/768p/10s',
+      'MiniMax-Hailuo-2.3-Fast/1080p/6s',
+    ],
+  },
+];
+
+function getToolForModel(model) {
+  return AI_TOOLS.find(tool => tool.models.includes(model)) || AI_TOOLS[0];
+}
 
 export default function GeneratorForm({
   form,
   onChange,
-  selectedPreset,
-  onPresetChange,
   disabled,
-  onModeChange,
 }) {
+  const selectedTool = getToolForModel(form.model);
+
+  const chooseTool = tool => {
+    onChange({ model: tool.models[0] });
+  };
+
   return (
-    <div className="studio-form">
-      <section className="work-section" id="studio">
-        <SectionHeading
-          step="01"
-          eyebrow="SERVICE TYPE"
-          title="选择生成方式"
-          description="先确定视频输入形式，后续可以在同一条任务链路中继续调试。"
-        />
+    <div className={styles.studioForm}>
+      <section className={styles.quickSetupPanel} id="studio" aria-label="视频基础设置">
+        <div className={styles.quickSetupRow}>
+          <div className={styles.compactStepHeading}>
+            <StepBadge value="01" />
+            <div>
+              <div className={shared.sectionEyebrow}>AI TOOL</div>
+              <h2>选择工具</h2>
+            </div>
+          </div>
 
-        <div className="service-grid">
-          <button type="button" className="service-card is-selected" disabled={disabled}>
-            <div className="service-card-top">
-              <div className="service-icon service-icon-green"><Sparkles size={21} /></div>
-              <div className="service-card-title">
-                <strong>文生视频</strong>
-                <span>TEXT TO VIDEO</span>
-              </div>
-              <Check className="service-check" size={20} />
-            </div>
-            <p>从一段自然语言描述生成动态镜头。</p>
-            <div className="service-chip-row">
-              <span>Seedance 2.0</span>
-              <span>中文提示词</span>
-              <span>自动扩写</span>
-            </div>
-          </button>
-
-          <button type="button" className="service-card" onClick={() => onModeChange?.('image')} disabled={disabled}>
-            <div className="service-card-top">
-              <div className="service-icon service-icon-muted"><Image size={21} /></div>
-              <div className="service-card-title">
-                <strong>参考图生视频</strong>
-                <span>IMAGE TO VIDEO</span>
-              </div>
-              <span className="coming-soon">切换工作台</span>
-            </div>
-            <p>上传一张参考图，控制画面运动和镜头方向。</p>
-            <div className="service-chip-row">
-              <span>首帧控制</span>
-              <span>动作参考</span>
-            </div>
-          </button>
+          <div className={styles.toolSegment} role="group" aria-label="选择 AI 工具">
+            {AI_TOOLS.map(tool => (
+              <button
+                type="button"
+                key={tool.id}
+                className={`${styles.toolOption} ${selectedTool.id === tool.id ? styles.isSelected : ''}`}
+                onClick={() => chooseTool(tool)}
+                disabled={disabled}
+              >
+                <span>{tool.label}</span>
+                {selectedTool.id === tool.id ? <Check size={14} /> : null}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="work-section">
-        <SectionHeading
-          step="02"
-          eyebrow="PICK A PRESET"
-          title="选择输出规格"
-          description="预设只会调整本次任务的参数，模型仍固定为当前已开通的 Seedance 模型。"
-        />
+      <section className={styles.quickSetupPanel} aria-label="模型版本设置">
+        <div className={styles.quickSetupRow}>
+          <div className={styles.compactStepHeading}>
+            <StepBadge value="02" />
+            <div>
+              <div className={shared.sectionEyebrow}>MODEL VERSION</div>
+              <h2>选择版本</h2>
+            </div>
+          </div>
 
-        <div className="preset-grid">
-          {PRESETS.map(preset => (
-            <button
-              type="button"
-              key={preset.id}
-              className={`preset-card ${selectedPreset === preset.id ? 'is-selected' : ''}`}
-              onClick={() => onPresetChange(preset)}
-              disabled={disabled}
-            >
-              {preset.recommended ? <span className="recommended-badge">推荐</span> : null}
-              <div className="preset-card-top">
-                <span className="preset-tag">{preset.tag}</span>
-                <span className="preset-value">{preset.value}</span>
-              </div>
-              <div className="preset-title">{preset.title}</div>
-              <p>{preset.description}</p>
-              <div className={`preset-action ${selectedPreset === preset.id ? 'is-selected' : ''}`}>
-                {selectedPreset === preset.id ? <Check size={16} /> : null}
-                {selectedPreset === preset.id ? '已选择' : '选择'}
-              </div>
-            </button>
-          ))}
+          <label className={styles.modelSelectField}>
+            <select value={form.model} onChange={event => onChange({ model: event.target.value })} disabled={disabled}>
+              {selectedTool.models.map(model => (
+                <option key={model} value={model}>{model}</option>
+              ))}
+            </select>
+            <ChevronDown size={15} aria-hidden="true" />
+          </label>
         </div>
       </section>
 
-      <section className="work-section prompt-section">
-        <SectionHeading
-          step="03"
-          eyebrow="PROMPT & PARAMETERS"
-          title="描述你的镜头"
-          description="用具体的主体、动作、环境和镜头语言描述你想生成的画面。"
-        />
+      <section className={`${shared.workSection} ${styles.promptSection} ${styles.promptSectionPrimary}`}>
+        <div className={styles.promptSectionHead}>
+          <SectionHeading
+            step="03"
+            eyebrow="PROMPT & PARAMETERS"
+            title="描述你的镜头"
+            description="用具体的主体、动作、环境和镜头语言描述你想生成的画面。"
+            compact
+          />
+          <div className={styles.currentConfigStrip} aria-label="当前模型配置">
+            <Check size={13} />
+            <span>{selectedTool.label} · {form.model}</span>
+          </div>
+        </div>
 
-        <div className="prompt-layout">
-          <label className="field-label prompt-field">
+        <div className={styles.promptLayout}>
+          <label className={`${shared.fieldLabel} ${styles.promptField}`}>
             <span>提示词</span>
             <textarea
               value={form.prompt}
@@ -110,17 +128,13 @@ export default function GeneratorForm({
             <small>{form.prompt.length} / 2000</small>
           </label>
 
-          <div className="parameter-panel">
-            <div className="parameter-panel-heading">
+          <div className={styles.parameterPanel}>
+            <div className={styles.parameterPanelHeading}>
               <span>精细参数</span>
               <ChevronDown size={15} />
             </div>
-            <label className="field-label">
-              <span>模型名称</span>
-              <input value={form.model} onChange={event => onChange({ model: event.target.value })} disabled={disabled} />
-            </label>
-            <div className="field-row">
-              <label className="field-label">
+            <div className={shared.fieldRow}>
+              <label className={shared.fieldLabel}>
                 <span>时长</span>
                 <select value={form.duration} onChange={event => onChange({ duration: Number(event.target.value) })} disabled={disabled}>
                   <option value={4}>4 秒</option>
@@ -130,7 +144,7 @@ export default function GeneratorForm({
                   <option value={10}>10 秒</option>
                 </select>
               </label>
-              <label className="field-label">
+              <label className={shared.fieldLabel}>
                 <span>分辨率</span>
                 <select value={form.resolution} onChange={event => onChange({ resolution: event.target.value })} disabled={disabled}>
                   <option value="480P">480P</option>
@@ -139,7 +153,7 @@ export default function GeneratorForm({
                 </select>
               </label>
             </div>
-            <label className="toggle-row">
+            <label className={styles.toggleRow}>
               <span>
                 <strong>提示词扩写</strong>
                 <small>让模型补全镜头、光照和运动细节</small>
@@ -150,7 +164,7 @@ export default function GeneratorForm({
                 onChange={event => onChange({ promptExtend: event.target.checked })}
                 disabled={disabled}
               />
-              <span className="toggle-control" aria-hidden="true" />
+              <span className={styles.toggleControl} aria-hidden="true" />
             </label>
           </div>
         </div>

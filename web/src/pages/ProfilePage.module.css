@@ -1,0 +1,196 @@
+.profilePage {
+  width: 100%;
+  max-width: 1080px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.profilePageEmpty {
+  min-height: calc(100vh - 68px - 91px);
+  align-content: center;
+}
+
+.profilePageEmpty .emptyAccountPanel {
+  width: min(100%, 560px);
+  margin: 0 auto;
+}
+
+.profileGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.profileCardHead {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--line);
+}
+
+.largeAvatar {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  border: 1px solid rgba(130, 229, 27, 0.7);
+  border-radius: 50%;
+  color: #071006;
+  background: var(--lime);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.profileCard h2 {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 21px;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.accountType {
+  display: inline-block;
+  margin-top: 7px;
+  color: var(--lime);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.profileFields {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.profileStatus {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 18px;
+  color: var(--lime);
+  font-size: 10px;
+}
+
+.connectionCard {
+  min-height: 271px;
+}
+
+.connectionState {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.connectionStateOnline {
+  color: var(--lime);
+}
+
+.apiKeyField {
+  margin-top: 20px;
+}
+
+.apiKeyField input {
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.connectionNote {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.connectionHealth {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 23px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--text-soft);
+  font-size: 10px;
+}
+
+.healthDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--orange);
+}
+
+.healthDotOnline {
+  background: var(--lime);
+  box-shadow: 0 0 8px rgba(130, 229, 27, 0.68);
+}
+
+.emptyAccountPanel {
+  display: grid;
+  justify-items: center;
+  max-width: 560px;
+  margin: 8vh auto 0;
+  padding: 42px 28px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 21, 17, 0.9);
+  text-align: center;
+}
+
+.emptyAccountIcon {
+  display: grid;
+  width: 49px;
+  height: 49px;
+  place-items: center;
+  border-radius: 50%;
+  color: #071006;
+  background: var(--lime);
+}
+
+.emptyAccountEyebrow {
+  margin-top: 22px;
+}
+
+.emptyAccountPanel h1 {
+  max-width: 850px;
+  margin: 10px 0 0;
+  color: var(--text);
+  font-size: 31px;
+  font-weight: 900;
+  line-height: 1.06;
+  letter-spacing: 0;
+}
+
+.emptyAccountPanel p {
+  max-width: 360px;
+  margin: 12px 0 22px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+@media (max-width: 620px) {
+  .profileGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .emptyAccountPanel {
+    padding: 34px 20px;
+  }
+}
+
+@media (max-width: 860px) {
+  .profilePageEmpty {
+    min-height: calc(100vh - 64px - 30px - 93px);
+  }
+}
+
+@media (max-width: 620px) {
+  .profilePageEmpty {
+    min-height: calc(100vh - 64px - 26px - 92px);
+  }
+}

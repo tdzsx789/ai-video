@@ -1,0 +1,23 @@
+.stepBadge {
+  display: grid;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(152, 242, 52, 0.75);
+  border-radius: 50%;
+  color: #071006;
+  background: var(--lime);
+  box-shadow: 0 0 25px rgba(130, 229, 27, 0.19);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+@media (max-width: 620px) {
+  .stepBadge {
+    width: 37px;
+    height: 37px;
+    font-size: 10px;
+  }
+}

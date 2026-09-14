@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import AuthModal from './components/AuthModal.jsx';
 import StudioPage from './pages/StudioPage.jsx';
+import styles from './App.module.css';
 
 function readStored(key, fallback) {
   try {
@@ -12,7 +13,7 @@ function readStored(key, fallback) {
 }
 
 export default function App() {
-  const [activeSection, setActiveSection] = useState('studio');
+  const [activeSection, setActiveSection] = useState('video');
   const [user, setUser] = useState(() => readStored('ai_jinchan_user', null));
   const [credits, setCredits] = useState(() => Number(localStorage.getItem('ai_jinchan_credits') || 860));
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('seedance_api_key') || import.meta.env.VITE_DEFAULT_API_KEY || '');
@@ -55,7 +56,7 @@ export default function App() {
     setUser(null);
     localStorage.removeItem('ai_jinchan_user');
     showToast('已退出当前账户。');
-    setActiveSection('studio');
+    setActiveSection('video');
   };
 
   const recharge = plan => {
@@ -99,7 +100,7 @@ export default function App() {
         />
       ) : null}
 
-      {toast ? <div className="toast-message" role="status">{toast}</div> : null}
+      {toast ? <div className={styles.toastMessage} role="status">{toast}</div> : null}
     </>
   );
 }

@@ -44,6 +44,13 @@ export function createVideoTask(payload, apiKey) {
   });
 }
 
+export function createImage(payload, apiKey) {
+  return request('/api/images/generate', {
+    method: 'POST',
+    body: JSON.stringify({ ...payload, apiKey }),
+  });
+}
+
 export function queryVideoTask(taskId, apiKey) {
   return request(`/api/tasks/${encodeURIComponent(taskId)}/query`, {
     method: 'POST',

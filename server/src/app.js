@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { config } from './config/env.js';
 import { countTasks, pool } from './db/index.js';
 import { historyRouter } from './routes/historyRoutes.js';
+import { imageRouter } from './routes/imageRoutes.js';
 import { modelRouter } from './routes/modelRoutes.js';
 import { videoRouter } from './routes/videoRoutes.js';
 
@@ -28,6 +29,7 @@ export function createApp() {
   });
 
   app.use('/api/history', historyRouter);
+  app.use('/api/images', imageRouter);
   app.use('/api/models', modelRouter);
   app.use('/api', videoRouter);
 

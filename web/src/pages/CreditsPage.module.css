@@ -1,0 +1,198 @@
+.creditsPage {
+  width: 100%;
+  max-width: 1080px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.balanceHero {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 177px;
+  padding: 13px 15px;
+  border: 1px solid rgba(130, 229, 27, 0.38);
+  border-radius: 8px;
+  background: rgba(130, 229, 27, 0.08);
+}
+
+.balanceHero span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  grid-column: 1 / -1;
+  color: var(--lime);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.balanceHero strong {
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 25px;
+}
+
+.balanceHero small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.creditPlans {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.creditPlan {
+  position: relative;
+  display: flex;
+  min-height: 303px;
+  flex-direction: column;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 21, 17, 0.88);
+}
+
+.creditPlan.isFeatured {
+  border-color: var(--lime);
+  background:
+    linear-gradient(180deg, rgba(52, 94, 34, 0.54), rgba(17, 21, 17, 0.95) 55%),
+    var(--panel);
+  box-shadow: 0 0 30px rgba(130, 229, 27, 0.1);
+}
+
+.planRecommend {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  padding: 5px 13px;
+  border-radius: 999px;
+  color: #071006;
+  background: var(--lime);
+  font-size: 10px;
+  font-weight: 900;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.creditPlanIcon {
+  display: grid;
+  width: 37px;
+  height: 37px;
+  place-items: center;
+  border-radius: 8px;
+  color: #071006;
+  background: var(--lime);
+}
+
+.creditPlanName {
+  margin-top: 19px;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.creditPlanCredits {
+  margin-top: 5px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 29px;
+  font-weight: 900;
+}
+
+.creditPlanCredits span {
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.creditPlan p {
+  min-height: 37px;
+  margin: 8px 0 18px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.creditPlanPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 13px;
+  border-top: 1px solid var(--line);
+}
+
+.creditPlanPrice strong {
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 20px;
+}
+
+.creditPlanPrice span {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.creditPlan button {
+  width: 100%;
+  margin-top: 17px;
+}
+
+.creditInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.costList {
+  display: grid;
+}
+
+.costList > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  color: var(--text-soft);
+  font-size: 11px;
+}
+
+.costList > div + div {
+  border-top: 1px solid var(--line-soft);
+}
+
+.costList strong {
+  color: var(--text);
+  font-size: 11px;
+}
+
+.balanceNote p {
+  margin: 15px 0 2px;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+@media (max-width: 620px) {
+  .creditPlans,
+  .creditInfoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .creditPlan {
+    min-height: 0;
+  }
+
+  .balanceHero {
+    min-width: 128px;
+  }
+
+  .balanceHero strong {
+    font-size: 19px;
+  }
+}

@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowUpRight,
-  CheckCircle2,
   ChevronRight,
+  CircleAlert,
   CirclePlay,
   Copy,
   Database,
-  Image,
+  Download,
+  ExternalLink,
   Server,
   ShieldCheck,
-  Sparkles,
-  Video,
 } from 'lucide-react';
 import AppHeader from '../components/AppHeader.jsx';
 import HistoryList from '../features/history/HistoryList.jsx';
@@ -20,10 +18,12 @@ import CreditsPage from './CreditsPage.jsx';
 import ProfilePage from './ProfilePage.jsx';
 import StatusBanner from '../components/StatusBanner.jsx';
 import TaskSummary from '../components/TaskSummary.jsx';
-import { createVideoTask, deleteHistory, getHealth, getHistory, queryVideoTask } from '../lib/api.js';
+import { createImage, createVideoTask, deleteHistory, getHealth, getHistory, queryVideoTask } from '../lib/api.js';
 import { formatDate, getTaskStatus, getVideoUrl, TERMINAL_STATUSES } from '../lib/format.js';
+import shared from '../styles/shared.module.css';
+import styles from './StudioPage.module.css';
 
-const DEFAULT_MODEL = 'doubao-seedance-2-0-fast-260128';
+const DEFAULT_MODEL = 'doubao-seedance-2-5-260628';
 const DEFAULT_PROMPT = '一个红色立方体在白色桌面上缓慢旋转，柔和棚拍光照，镜头平稳，电影质感。';
 const POLL_INTERVAL = 5000;
 const MAX_POLL_TIME = 30 * 60 * 1000;
@@ -40,6 +40,7 @@ function initialForm() {
 
 function initialImageForm() {
   return {
+    model: 'gpt-image-2.5',
     prompt: '一把金色的铲子置于黑曜石台面上，柔和的轮廓光，极简商业摄影，细腻高光。',
     style: 'product',
     ratio: '1:1',
@@ -64,65 +65,89 @@ function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function WorkspaceTabs({ mode, onChange }) {
-  return (
-    <div className="workspace-tabs" role="tablist" aria-label="工作台类型">
-      <button type="button" className={mode === 'video' ? 'is-active' : ''} onClick={() => onChange('video')}>
-        <Video size={17} />
-        <span>视频创作</span>
-        <small>VIDEO</small>
-      </button>
-      <button type="button" className={mode === 'image' ? 'is-active' : ''} onClick={() => onChange('image')}>
-        <Image size={17} />
-        <span>图片创作</span>
-        <small>IMAGE</small>
-      </button>
-    </div>
-  );
+function imageStateLabel({ generating, result, error, requested }) {
+  if (generating) return '生成中';
+  if (error) return '生成失败';
+  if (result?.imageUrl) return '已生成';
+  return requested ? '已提交' : '等待生成';
 }
 
-function ImageResultPanel({ generating, requested }) {
+function ImageResultPanel({ generating, requested, result, error, form, onCopy }) {
+  const imageUrl = result?.imageUrl || '';
+  const hasImage = Boolean(imageUrl);
+  const stateLabel = imageStateLabel({ generating, result, error, requested });
+  const previewClassName = [
+    styles.imageResultPreview,
+    requested ? styles.isRequested : '',
+    hasImage ? styles.hasImage : '',
+    error ? styles.hasError : '',
+  ].filter(Boolean).join(' ');
+
   return (
-    <aside className="image-result-panel">
-      <div className="image-result-heading">
+    <aside className={styles.imageResultPanel}>
+      <div className={styles.imageResultHeading}>
         <div>
-          <div className="panel-kicker">IMAGE OUTPUT</div>
+          <div className={shared.panelKicker}>IMAGE OUTPUT</div>
           <h2>图片结果</h2>
         </div>
-        <span className="result-state"><span className="result-state-dot" /> {requested ? '已创建草稿' : '等待生成'}</span>
+        <span className={`${styles.resultState} ${generating ? styles.isLoading : ''} ${hasImage ? styles.isSuccess : ''} ${error ? styles.isDanger : ''}`}>
+          <span className={styles.resultStateDot} />
+          {stateLabel}
+        </span>
       </div>
-      <div className={`image-result-preview ${requested ? 'is-requested' : ''}`}>
-        <div className="preview-grid" />
-        <div className="image-result-placeholder">
-          {generating ? (
-            <>
-              <span className="preview-spinner" />
-              <strong>正在准备图片草稿</strong>
-              <small>图片接口接入后会在这里返回成品</small>
-            </>
-          ) : requested ? (
-            <>
-              <CheckCircle2 size={28} />
-              <strong>图片任务已创建</strong>
-              <small>等待图片生成服务接入后即可查看高清结果</small>
-            </>
-          ) : (
-            <>
-              <CirclePlay size={28} />
-              <strong>提交描述后查看结果</strong>
-              <small>右侧参数会同步到本次图片草稿</small>
-            </>
-          )}
+      <div className={previewClassName}>
+        <div className={styles.previewGrid} />
+        {hasImage ? (
+          <img src={imageUrl} alt="AI金铲生成图片" />
+        ) : (
+          <div className={styles.imageResultPlaceholder}>
+            {generating ? (
+              <>
+                <span className={styles.previewSpinner} />
+                <strong>正在调用 {form.model || 'gpt-image-2.5'}</strong>
+                <small>生成完成后会在这里显示图片结果</small>
+              </>
+            ) : error ? (
+              <>
+                <CircleAlert size={28} />
+                <strong>图片生成失败</strong>
+                <small>{error}</small>
+              </>
+            ) : (
+              <>
+                <CirclePlay size={28} />
+                <strong>提交描述后查看结果</strong>
+                <small>画幅和风格会同步到本次生成任务</small>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+      {hasImage ? (
+        <div className={`${shared.resultActions} ${styles.imageResultActions}`}>
+          <a className={shared.inlineAction} href={imageUrl} download="ai-jinchan-image.png">
+            <Download size={14} />
+            下载图片
+          </a>
+          <a className={shared.inlineAction} href={imageUrl} target="_blank" rel="noreferrer">
+            <ExternalLink size={14} />
+            打开原图
+          </a>
+          <button className={shared.inlineAction} type="button" onClick={() => onCopy(imageUrl)}>
+            <Copy size={14} />
+            复制地址
+          </button>
         </div>
-      </div>
-      <div className="image-result-meta">
-        <div><span>输出画幅</span><strong>跟随工作台设置</strong></div>
-        <div><span>当前状态</span><strong>{requested ? '草稿已保存' : '尚未创建'}</strong></div>
+      ) : null}
+      <div className={styles.imageResultMeta}>
+        <div><span>输出画幅</span><strong>{result?.ratio || form.ratio}</strong></div>
+        <div><span>图片模型</span><strong>{result?.model || form.model || 'gpt-image-2.5'}</strong></div>
+        <div><span>当前状态</span><strong>{stateLabel}</strong></div>
         <div><span>消耗积分</span><strong>12 积分 / 张</strong></div>
       </div>
-      <div className="image-connection-note">
+      <div className={styles.imageConnectionNote}>
         <ShieldCheck size={15} />
-        <span>图片工作台已预留生成链路，接入图片模型后无需调整产品结构。</span>
+        <span>{hasImage ? `生成尺寸 ${result?.size || '跟随画幅设置'}，可下载或复制图片地址。` : '图片创作已接入 gpt-image-2.5 生成链路。'}</span>
       </div>
     </aside>
   );
@@ -142,15 +167,15 @@ export default function StudioPage({
 }) {
   const [form, setForm] = useState(initialForm);
   const [imageForm, setImageForm] = useState(initialImageForm);
-  const [selectedPreset, setSelectedPreset] = useState('studio');
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [imageGenerating, setImageGenerating] = useState(false);
   const [imageRequested, setImageRequested] = useState(false);
+  const [imageResult, setImageResult] = useState(null);
+  const [imageError, setImageError] = useState('');
   const [task, setTask] = useState(null);
   const [statusMessage, setStatusMessage] = useState('准备就绪，可以开始生成。');
-  const [activeMode, setActiveMode] = useState('video');
   const [health, setHealth] = useState(null);
   const pollingRef = useRef(false);
 
@@ -184,15 +209,6 @@ export default function StudioPage({
 
   const setImageFormValue = values => {
     setImageForm(current => ({ ...current, ...values }));
-  };
-
-  const choosePreset = preset => {
-    setSelectedPreset(preset.id);
-    setFormValue({
-      duration: preset.duration,
-      resolution: preset.resolution,
-      promptExtend: preset.promptExtend,
-    });
   };
 
   const copyText = async text => {
@@ -282,13 +298,28 @@ export default function StudioPage({
   };
 
   const generateImage = async () => {
-    if (!imageForm.prompt.trim()) return;
+    if (!imageForm.prompt.trim()) {
+      setStatusMessage('请先填写图片提示词。');
+      return;
+    }
+
     setImageGenerating(true);
-    setImageRequested(false);
-    await wait(900);
     setImageRequested(true);
-    setImageGenerating(false);
-    setStatusMessage('图片草稿已创建，等待图片生成接口接入。');
+    setImageResult(null);
+    setImageError('');
+    setStatusMessage(`正在调用 ${imageForm.model || 'gpt-image-2.5'} 生成图片…`);
+
+    try {
+      const response = await createImage(imageForm, apiKey);
+      setImageResult(response.result);
+      setStatusMessage('图片生成完成。');
+    } catch (error) {
+      const message = error.message || '图片生成失败。';
+      setImageError(message);
+      setStatusMessage(message);
+    } finally {
+      setImageGenerating(false);
+    }
   };
 
   const manualPoll = async taskId => {
@@ -314,14 +345,14 @@ export default function StudioPage({
   const visibleHistory = useMemo(() => history.slice(0, 3), [history]);
 
   const renderHistoryPage = () => (
-    <div className="page-stack history-page">
-      <section className="page-heading">
+    <div className={`${shared.pageStack} ${styles.historyPage}`}>
+      <section className={shared.pageHeading}>
         <div>
-          <div className="section-eyebrow">CREATION ARCHIVE</div>
+          <div className={shared.sectionEyebrow}>CREATION ARCHIVE</div>
           <h1>历史记录</h1>
           <p>所有完成的视频任务都会自动归档，方便继续查询和复用。</p>
         </div>
-        <div className="heading-stat">
+        <div className={styles.headingStat}>
           <Database size={17} />
           <strong>{history.length}</strong>
           <span>条创作记录</span>
@@ -339,146 +370,124 @@ export default function StudioPage({
   );
 
   const renderWorkspace = () => (
-    <div className="page-stack workspace-page">
-      <section className="workspace-heading">
-        <div>
-          <div className="section-eyebrow">CREATIVE WORKSPACE</div>
-          <h1>今天，做点好看的。</h1>
-          <p>从一句描述开始，用 AI金铲快速完成视频与图片创作。</p>
-        </div>
-        <div className="workspace-heading-side">
-          <div className="heading-credit">
-            <CoinsIcon />
-            <span>可用积分</span>
-            <strong>{Number(credits || 0).toLocaleString('zh-CN')}</strong>
-          </div>
-          {!user ? (
-            <button type="button" className="header-login-action" onClick={onOpenAuth}>
-              登录 / 注册 <ArrowUpRight size={14} />
-            </button>
-          ) : null}
-        </div>
-      </section>
+    <div className={`${shared.pageStack} ${styles.workspacePage}`}>
+      <div className={styles.studioLayout}>
+        <div className={styles.studioMain}>
+          <GeneratorForm
+            form={form}
+            onChange={setFormValue}
+            disabled={generating}
+          />
 
-      <WorkspaceTabs mode={activeMode} onChange={mode => {
-        setActiveMode(mode);
-        setStatusMessage(mode === 'video' ? '视频工作台已准备好。' : '图片工作台已准备好。');
-      }} />
-
-      {activeMode === 'video' ? (
-        <div className="studio-layout">
-          <div className="studio-main">
-            <GeneratorForm
-              form={form}
-              onChange={setFormValue}
-              selectedPreset={selectedPreset}
-              onPresetChange={choosePreset}
-              disabled={generating}
-              onModeChange={mode => {
-                setActiveMode(mode);
-                setStatusMessage('图片工作台已准备好。');
-              }}
-            />
-
-            <section className="status-section">
-              <StatusBanner status={currentStatus} message={statusMessage} />
-              {task?.id ? (
-                <div className="task-inline">
-                  <div>
-                    <span>当前任务</span>
-                    <strong>{task.id}</strong>
-                  </div>
-                  <button type="button" onClick={() => copyText(task.id)} title="复制任务编号">
-                    <Copy size={14} />
-                    复制编号
-                  </button>
-                </div>
-              ) : null}
-            </section>
-
-            <section className="history-section">
-              <div className="section-trail">
+          <section className={styles.statusSection}>
+            <StatusBanner status={currentStatus} message={statusMessage} />
+            {task?.id ? (
+              <div className={styles.taskInline}>
                 <div>
-                  <div className="section-eyebrow">RECENT CREATIONS</div>
-                  <h2>最近创作</h2>
+                  <span>当前任务</span>
+                  <strong>{task.id}</strong>
                 </div>
-                <button type="button" className="text-action" onClick={() => onNavigate('history')}>
-                  查看全部 <ChevronRight size={15} />
+                <button className={shared.inlineAction} type="button" onClick={() => copyText(task.id)} title="复制任务编号">
+                  <Copy size={14} />
+                  复制编号
                 </button>
               </div>
-              <HistoryList
-                items={visibleHistory}
-                loading={historyLoading}
-                onRefresh={loadHistory}
-                onClear={clearHistory}
-                onCopy={copyText}
-                onUseTask={manualPoll}
-                compact
-              />
-            </section>
-          </div>
-
-          <div className="studio-side">
-            <TaskSummary
-              task={task}
-              currentVideoUrl={currentVideoUrl}
-              onCopy={copyText}
-              onGenerate={generate}
-              generating={generating}
-              form={form}
-            />
-            <div className="side-note">
-              <div className="side-note-icon"><ShieldCheck size={16} /></div>
-              <div>
-                <strong>服务连接状态</strong>
-                <p>Node 服务与数据库 {health?.ok ? '连接正常' : '正在检查'}，密钥不会写进视频历史记录。</p>
-              </div>
-            </div>
-            {visibleHistory.length ? (
-              <div className="recent-rail">
-                <div className="recent-rail-heading">
-                  <div>
-                    <div className="panel-kicker">QUICK ACCESS</div>
-                    <h3>最近结果</h3>
-                  </div>
-                  <Database size={16} />
-                </div>
-                {visibleHistory.map(item => (
-                  <button key={item.id || item.videoUrl} type="button" className="recent-item" onClick={() => item.videoUrl && window.open(item.videoUrl, '_blank', 'noopener,noreferrer')}>
-                    <span className="recent-item-status" />
-                    <span className="recent-item-copy">
-                      <strong>{item.prompt || '未记录提示词'}</strong>
-                      <small>{formatDate(item.finishedAt || item.savedAt)}</small>
-                    </span>
-                    <ChevronRight size={15} />
-                  </button>
-                ))}
-              </div>
             ) : null}
+          </section>
+
+          <section className={styles.historySection}>
+            <div className={styles.sectionTrail}>
+              <div>
+                <div className={shared.sectionEyebrow}>RECENT CREATIONS</div>
+                <h2>最近创作</h2>
+              </div>
+              <button type="button" className={styles.textAction} onClick={() => onNavigate('history')}>
+                查看全部 <ChevronRight size={15} />
+              </button>
+            </div>
+            <HistoryList
+              items={visibleHistory}
+              loading={historyLoading}
+              onRefresh={loadHistory}
+              onClear={clearHistory}
+              onCopy={copyText}
+              onUseTask={manualPoll}
+              compact
+            />
+          </section>
+        </div>
+
+        <div className={styles.studioSide}>
+          <TaskSummary
+            task={task}
+            currentVideoUrl={currentVideoUrl}
+            onCopy={copyText}
+            onGenerate={generate}
+            generating={generating}
+            form={form}
+          />
+          <div className={styles.sideNote}>
+            <div className={styles.sideNoteIcon}><ShieldCheck size={16} /></div>
+            <div>
+              <strong>服务连接状态</strong>
+              <p>Node 服务与数据库 {health?.ok ? '连接正常' : '正在检查'}，密钥不会写进视频历史记录。</p>
+            </div>
           </div>
+          {visibleHistory.length ? (
+            <div className={styles.recentRail}>
+              <div className={styles.recentRailHeading}>
+                <div>
+                  <div className={shared.panelKicker}>QUICK ACCESS</div>
+                  <h3>最近结果</h3>
+                </div>
+                <Database size={16} />
+              </div>
+              {visibleHistory.map(item => (
+                <button key={item.id || item.videoUrl} type="button" className={styles.recentItem} onClick={() => item.videoUrl && window.open(item.videoUrl, '_blank', 'noopener,noreferrer')}>
+                  <span className={styles.recentItemStatus} />
+                  <span className={styles.recentItemCopy}>
+                    <strong>{item.prompt || '未记录提示词'}</strong>
+                    <small>{formatDate(item.finishedAt || item.savedAt)}</small>
+                  </span>
+                  <ChevronRight size={15} />
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
-      ) : (
-        <div className="image-layout">
-          <ImageGeneratorForm form={imageForm} onChange={setImageFormValue} onGenerate={generateImage} generating={imageGenerating} />
-          <ImageResultPanel generating={imageGenerating} requested={imageRequested} />
-        </div>
-      )}
+      </div>
+    </div>
+  );
+
+  const renderImageWorkspace = () => (
+    <div className={`${shared.pageStack} ${styles.workspacePage}`}>
+      <div className={styles.imageLayout}>
+        <ImageGeneratorForm form={imageForm} onChange={setImageFormValue} onGenerate={generateImage} generating={imageGenerating} />
+        <ImageResultPanel
+          generating={imageGenerating}
+          requested={imageRequested}
+          result={imageResult}
+          error={imageError}
+          form={imageForm}
+          onCopy={copyText}
+        />
+      </div>
     </div>
   );
 
   return (
-    <div className="app-shell">
+    <div className={styles.appShell}>
       <AppHeader
         credits={credits}
         user={user}
         activeSection={activeSection}
         onNavigate={onNavigate}
         onOpenAuth={onOpenAuth}
-        onLogout={onLogout}
       />
 
-      <main className="page-content">
-        {activeSection === 'studio' ? renderWorkspace() : null}
+      <main className={styles.pageContent}>
+        {activeSection === 'video' ? renderWorkspace() : null}
+        {activeSection === 'image' ? renderImageWorkspace() : null}
         {activeSection === 'history' ? renderHistoryPage() : null}
         {activeSection === 'credits' ? <CreditsPage credits={credits} onRecharge={onRecharge} /> : null}
         {activeSection === 'profile' ? (
@@ -494,14 +503,10 @@ export default function StudioPage({
         ) : null}
       </main>
 
-      <footer className="app-footer">
+      <footer className={styles.appFooter}>
         <div><Server size={14} /> AI金铲 · Node API · PostgreSQL</div>
         <span>为创作而生的 AI 工作区</span>
       </footer>
     </div>
   );
-}
-
-function CoinsIcon() {
-  return <span className="heading-credit-icon"><Sparkles size={14} /></span>;
 }

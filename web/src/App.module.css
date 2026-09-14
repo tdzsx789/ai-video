@@ -1,0 +1,24 @@
+.toastMessage {
+  position: fixed;
+  z-index: 60;
+  right: 24px;
+  bottom: 24px;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 12px 15px;
+  border: 1px solid rgba(130, 229, 27, 0.58);
+  border-radius: 7px;
+  color: var(--text);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 620px) {
+  .toastMessage {
+    right: 14px;
+    bottom: 80px;
+    left: 14px;
+    max-width: none;
+  }
+}
