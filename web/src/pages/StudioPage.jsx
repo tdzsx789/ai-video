@@ -35,6 +35,17 @@ function initialForm() {
     duration: 5,
     resolution: '720P',
     promptExtend: true,
+    referenceImageUrl: '',
+    referenceVideoUrl: '',
+    referenceAudioUrl: '',
+    callbackUrl: '',
+    returnLastFrame: false,
+    executionExpiresAfter: 172800,
+    generateAudio: true,
+    ratio: '16:9',
+    watermark: false,
+    seed: '',
+    frames: '',
   };
 }
 

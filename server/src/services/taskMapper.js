@@ -74,7 +74,7 @@ export function taskToRecord(task, requestPayload = {}) {
     model: String(input.model || requestPayload.model || properties.model || resultData.model || task?.model || '').trim(),
     prompt: String(input.prompt || requestPayload.prompt || resultData.prompt || '').trim(),
     duration: input.duration ?? resultData.duration ?? ratios.duration ?? '',
-    resolution: String(input.metadata?.parameters?.resolution || resultData.resolution || ratios.resolution || '').trim(),
+    resolution: String(input.resolution || input.metadata?.parameters?.resolution || resultData.resolution || ratios.resolution || '').trim(),
     videoUrl: extractVideoUrl(task),
     lastFrameUrl: extractLastFrameUrl(task),
     requestPayload,

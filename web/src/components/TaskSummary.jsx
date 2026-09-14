@@ -66,7 +66,11 @@ export default function TaskSummary({
         </div>
         <div className={styles.summaryLine}>
           <span>输出规格</span>
-          <strong>{form.resolution} · {formatDuration(form.duration)}</strong>
+          <strong>{form.resolution} · {form.ratio || '16:9'} · {form.duration === -1 ? '自动时长' : formatDuration(form.duration)}</strong>
+        </div>
+        <div className={styles.summaryLine}>
+          <span>音频 / 水印</span>
+          <strong>{form.generateAudio === false ? '关闭音频' : '生成音频'} · {form.watermark ? '含水印' : '无水印'}</strong>
         </div>
         <div className={styles.summaryLine}>
           <span>任务编号</span>

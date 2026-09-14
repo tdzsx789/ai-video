@@ -205,6 +205,55 @@
   color: var(--lime);
 }
 
+.parameterGrid,
+.referenceGrid,
+.advancedGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.parameterGrid,
+.referenceGrid,
+.advancedGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.callbackField {
+  grid-column: 1 / -1;
+}
+
+.officialOptions {
+  display: grid;
+  gap: 13px;
+}
+
+.parameterGroupHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 2px;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.parameterGroupHeading small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.toggleGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.referenceGrid input,
+.advancedGrid input {
+  min-width: 0;
+}
+
 .toggleRow {
   position: relative;
   display: flex;
@@ -307,5 +356,15 @@
 
   .promptLayout {
     gap: 12px;
+  }
+
+  .parameterGrid,
+  .referenceGrid,
+  .advancedGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .callbackField {
+    grid-column: auto;
   }
 }
