@@ -108,6 +108,10 @@ const IMAGE_PRICING = [
   },
 ];
 
+function chargeUnitLabel(unit) {
+  return String(unit || '').replace('每次生成', '次').replace('每张图片', '张');
+}
+
 function PricingTable({ title, description, icon: Icon, items }) {
   return (
     <section className={styles.pricingSection}>
@@ -143,8 +147,8 @@ function PricingTable({ title, description, icon: Icon, items }) {
                 <strong>{item.specs}</strong>
               </div>
               <div className={styles.creditCell}>
-                <small>{item.unit}</small>
-                <strong><Coins size={14} /> {item.credits}</strong>
+                <small>计费单位</small>
+                <strong><Coins size={14} /> {item.credits} 积分 / {chargeUnitLabel(item.unit)}</strong>
               </div>
               <p>{item.note}</p>
             </article>
