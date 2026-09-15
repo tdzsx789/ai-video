@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
   username_normalized TEXT NOT NULL,
   email TEXT NOT NULL,
   email_normalized TEXT NOT NULL,
+  phone TEXT NOT NULL DEFAULT '',
+  phone_normalized TEXT NOT NULL DEFAULT '',
   name TEXT NOT NULL,
   password_hash TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'active',
@@ -19,6 +21,8 @@ CREATE TABLE IF NOT EXISTS users (
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS username_normalized TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_normalized TEXT NOT NULL DEFAULT '';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
 UPDATE users
 SET username = COALESCE(NULLIF(trim(username), ''), split_part(email, '@', 1))
@@ -28,6 +32,10 @@ SET username_normalized = lower(trim(username))
 WHERE username_normalized IS NULL OR trim(username_normalized) = '';
 ALTER TABLE users ALTER COLUMN username SET NOT NULL;
 ALTER TABLE users ALTER COLUMN username_normalized SET NOT NULL;
+ALTER TABLE users ALTER COLUMN phone SET DEFAULT '';
+ALTER TABLE users ALTER COLUMN phone SET NOT NULL;
+ALTER TABLE users ALTER COLUMN phone_normalized SET DEFAULT '';
+ALTER TABLE users ALTER COLUMN phone_normalized SET NOT NULL;
 
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_username_normalized_check;
 ALTER TABLE users ADD CONSTRAINT users_username_normalized_check
@@ -42,6 +50,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_email_normalized_idx
 
 CREATE UNIQUE INDEX IF NOT EXISTS users_username_normalized_idx
   ON users (username_normalized);
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_phone_normalized_idx
+  ON users (phone_normalized)
+  WHERE phone_normalized <> '';
 
 CREATE TABLE IF NOT EXISTS auth_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

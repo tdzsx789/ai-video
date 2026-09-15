@@ -148,6 +148,48 @@
   line-height: 1.5;
 }
 
+.apiKeyPanel {
+  display: grid;
+  gap: 13px;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 21, 17, 0.82);
+}
+
+.apiKeyPanelHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.apiKeyPanelHeading h3 {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.apiKeyPanelHeading > svg {
+  color: var(--lime);
+}
+
+.apiKeyPanel .fieldLabel input {
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.apiKeyPanelNote {
+  margin: -3px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
 .recentRail {
   padding: 17px;
   border: 1px solid var(--line);

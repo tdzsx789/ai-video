@@ -2,8 +2,21 @@ import { useEffect, useState } from 'react';
 import AuthModal from './components/AuthModal.jsx';
 import HomePage from './pages/HomePage.jsx';
 import StudioPage from './pages/StudioPage.jsx';
-import { getCurrentUser, login, logout as logoutRequest, recharge, updateProfile } from './lib/api.js';
+import {
+  getCurrentUser,
+  login,
+  logout as logoutRequest,
+  recharge,
+  updatePassword,
+  updateProfile,
+} from './lib/api.js';
 import styles from './App.module.css';
+
+const PAYMENT_METHOD_LABELS = {
+  wechat: '微信支付',
+  alipay: '支付宝支付',
+  card: '银行卡 / 信用卡',
+};
 
 export default function App() {
   const [activeSection, setActiveSection] = useState('video');
@@ -57,13 +70,15 @@ export default function App() {
   };
 
   const updateUser = async patch => {
-    try {
-      const response = await updateProfile(patch);
-      setUser(response.user);
-      showToast('个人资料已更新。');
-    } catch (error) {
-      showToast(error.message || '更新个人资料失败。');
-    }
+    const response = await updateProfile(patch);
+    setUser(response.user);
+    return response.user;
+  };
+
+  const changePassword = async (currentPassword, newPassword) => {
+    const response = await updatePassword(currentPassword, newPassword);
+    showToast(response.message || '密码已更新。');
+    return response;
   };
 
   const logout = async () => {
@@ -78,11 +93,12 @@ export default function App() {
     setActiveSection('video');
   };
 
-  const handleRecharge = async plan => {
+  const handleRecharge = async (plan, paymentMethod = 'wechat') => {
     try {
-      const response = await recharge(plan.id, crypto.randomUUID());
+      const response = await recharge(plan.id, crypto.randomUUID(), paymentMethod);
       setCredits(Number(response.balance || 0));
-      showToast(`已模拟充值 ${plan.credits.toLocaleString('zh-CN')} 积分。`);
+      const paymentLabel = PAYMENT_METHOD_LABELS[paymentMethod] || PAYMENT_METHOD_LABELS.wechat;
+      showToast(`已模拟通过${paymentLabel}充值 ${plan.credits.toLocaleString('zh-CN')} 积分。`);
     } catch (error) {
       showToast(error.message || '充值失败。');
     }
@@ -113,6 +129,7 @@ export default function App() {
             setApiKey(value);
           }}
           onSaveUser={updateUser}
+          onChangePassword={changePassword}
           onCreditsChange={setCredits}
         />
       ) : (

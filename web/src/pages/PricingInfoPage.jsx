@@ -1,4 +1,5 @@
 import { Coins, Image, Info, ShieldCheck, Sparkles, Video } from 'lucide-react';
+import { useState } from 'react';
 import { getModelLabel } from '../lib/modelLabels.js';
 import shared from '../styles/shared.module.css';
 import styles from './PricingInfoPage.module.css';
@@ -108,6 +109,25 @@ const IMAGE_PRICING = [
   },
 ];
 
+const PRICING_VIEWS = {
+  video: {
+    label: '视频生成',
+    title: 'VIDEO PRICING',
+    description: '视频生成收费',
+    icon: Video,
+    items: VIDEO_PRICING,
+    range: '22 - 108 积分 / 次',
+  },
+  image: {
+    label: '图片生成',
+    title: 'IMAGE PRICING',
+    description: '图片生成收费',
+    icon: Image,
+    items: IMAGE_PRICING,
+    range: '10 - 18 积分 / 张',
+  },
+};
+
 function chargeUnitLabel(unit) {
   return String(unit || '').replace('每次生成', '次').replace('每张图片', '张');
 }
@@ -160,6 +180,10 @@ function PricingTable({ title, description, icon: Icon, items }) {
 }
 
 export default function PricingInfoPage() {
+  const [activeType, setActiveType] = useState('video');
+  const activePricing = PRICING_VIEWS[activeType];
+  const ActiveIcon = activePricing.icon;
+
   return (
     <div className={`${shared.pageStack} ${styles.pricingPage}`}>
       <section className={`${shared.pageHeading} ${shared.pageHeadingCompact}`}>
@@ -174,16 +198,36 @@ export default function PricingInfoPage() {
         </div>
       </section>
 
+      <div className={styles.pricingSwitcher} role="tablist" aria-label="费用类型">
+        {Object.entries(PRICING_VIEWS).map(([type, view]) => {
+          const Icon = view.icon;
+          const isActive = activeType === type;
+          return (
+            <button
+              key={type}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              className={`${styles.pricingTab} ${isActive ? styles.pricingTabActive : ''}`}
+              onClick={() => setActiveType(type)}
+            >
+              <Icon size={16} />
+              <span>{view.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className={styles.summaryGrid}>
         <div className={styles.summaryCard}>
-          <Video size={18} />
-          <span>视频生成</span>
-          <strong>22 - 108 积分 / 次</strong>
+          <ActiveIcon size={18} />
+          <span>当前分类</span>
+          <strong>{activePricing.label}</strong>
         </div>
         <div className={styles.summaryCard}>
-          <Image size={18} />
-          <span>图片生成</span>
-          <strong>10 - 18 积分 / 张</strong>
+          <Coins size={18} />
+          <span>Mock 消耗区间</span>
+          <strong>{activePricing.range}</strong>
         </div>
         <div className={styles.summaryCard}>
           <ShieldCheck size={18} />
@@ -193,17 +237,10 @@ export default function PricingInfoPage() {
       </div>
 
       <PricingTable
-        title="VIDEO PRICING"
-        description="视频生成收费"
-        icon={Video}
-        items={VIDEO_PRICING}
-      />
-
-      <PricingTable
-        title="IMAGE PRICING"
-        description="图片生成收费"
-        icon={Image}
-        items={IMAGE_PRICING}
+        title={activePricing.title}
+        description={activePricing.description}
+        icon={activePricing.icon}
+        items={activePricing.items}
       />
 
       <section className={styles.noticePanel}>

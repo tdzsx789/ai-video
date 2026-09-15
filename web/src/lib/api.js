@@ -52,15 +52,22 @@ export function updateProfile(profile) {
   });
 }
 
+export function updatePassword(currentPassword, newPassword) {
+  return request('/api/account/password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
 export function getCredits() {
   return request('/api/account/credits');
 }
 
-export function recharge(planId, idempotencyKey) {
+export function recharge(planId, idempotencyKey, paymentMethod = 'wechat') {
   return request('/api/account/recharge', {
     method: 'POST',
     headers: { 'Idempotency-Key': idempotencyKey },
-    body: JSON.stringify({ planId }),
+    body: JSON.stringify({ planId, paymentMethod }),
   });
 }
 

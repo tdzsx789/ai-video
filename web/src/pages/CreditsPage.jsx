@@ -1,4 +1,13 @@
-import { Check, Coins, Crown, Gem, Sparkles, Zap } from 'lucide-react';
+import { useState } from 'react';
+import {
+  Check,
+  Coins,
+  CreditCard,
+  Gem,
+  ShieldCheck,
+  Sparkles,
+  Zap,
+} from 'lucide-react';
 import shared from '../styles/shared.module.css';
 import styles from './CreditsPage.module.css';
 
@@ -30,7 +39,42 @@ const PLANS = [
   },
 ];
 
+const PAYMENT_METHODS = [
+  {
+    id: 'wechat',
+    name: '微信支付',
+    description: '扫码或微信客户端支付',
+    logo: '/payment-wechat.svg',
+  },
+  {
+    id: 'alipay',
+    name: '支付宝支付',
+    description: '支持常用支付方式',
+    logo: '/payment-alipay.svg',
+  },
+  {
+    id: 'card',
+    name: '银行卡 / 信用卡',
+    description: 'Visa、Mastercard 等',
+    icon: CreditCard,
+  },
+];
+
+const PAYMENT_LABELS = Object.fromEntries(
+  PAYMENT_METHODS.map(method => [method.id, method.name]),
+);
+
+function formatPrice(price) {
+  return `¥${Number(price).toFixed(2)}`;
+}
+
 export default function CreditsPage({ credits, onRecharge }) {
+  const [selectedPlanId, setSelectedPlanId] = useState('creator');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('wechat');
+  const selectedPlan = PLANS.find(plan => plan.id === selectedPlanId) || PLANS[1];
+  const SelectedPlanIcon = selectedPlan.icon;
+  const selectedPaymentLabel = PAYMENT_LABELS[selectedPaymentMethod] || PAYMENT_LABELS.wechat;
+
   return (
     <div className={`${shared.pageStack} ${styles.creditsPage}`}>
       <section className={`${shared.pageHeading} ${shared.pageHeadingCompact}`}>
@@ -46,52 +90,132 @@ export default function CreditsPage({ credits, onRecharge }) {
         </div>
       </section>
 
-      <section className={styles.creditPlans}>
-        {PLANS.map(plan => {
-          const Icon = plan.icon;
-          return (
-            <article key={plan.id} className={`${styles.creditPlan} ${plan.featured ? styles.isFeatured : ''}`}>
-              {plan.featured ? <span className={styles.planRecommend}>最受欢迎</span> : null}
-              <div className={styles.creditPlanIcon}><Icon size={19} /></div>
-              <div className={styles.creditPlanName}>{plan.name}</div>
-              <div className={styles.creditPlanCredits}>{plan.credits.toLocaleString('zh-CN')} <span>积分</span></div>
-              <p>{plan.description}</p>
-              <div className={styles.creditPlanPrice}><strong>¥{plan.price}</strong><span>一次性</span></div>
-              <button type="button" className={plan.featured ? shared.primaryAction : shared.secondaryAction} onClick={() => onRecharge(plan)}>
-                <Coins size={15} />
-                立即充值
-              </button>
-            </article>
-          );
-        })}
-      </section>
-
-      <section className={styles.creditInfoGrid}>
-        <div className={shared.plainPanel}>
-          <div className={shared.plainPanelHeading}>
+      <div className={styles.purchaseLayout}>
+        <section className={styles.planPicker} aria-label="选择充值套餐">
+          <div className={styles.planPickerHeader}>
             <div>
-              <div className={shared.panelKicker}>HOW IT WORKS</div>
-              <h2>积分消耗</h2>
+              <div className={shared.panelKicker}>CREDIT PACKAGES</div>
+              <h2>选择充值套餐</h2>
             </div>
-            <Crown size={18} />
+            <span>一次性到账 · 永久有效</span>
           </div>
-          <div className={styles.costList}>
-            <div><span>视频生成</span><strong>约 30 积分 / 次</strong></div>
-            <div><span>图片生成</span><strong>约 12 积分 / 张</strong></div>
-            <div><span>失败任务</span><strong>不扣除积分</strong></div>
+
+          <div className={styles.creditPlans}>
+            {PLANS.map(plan => {
+              const Icon = plan.icon;
+              const isSelected = plan.id === selectedPlan.id;
+              return (
+                <article
+                  key={plan.id}
+                  className={`${styles.creditPlan} ${plan.featured ? styles.isFeatured : ''} ${isSelected ? styles.isSelected : ''}`}
+                >
+                  {plan.featured ? <span className={styles.planRecommend}>最受欢迎</span> : null}
+                  <div className={styles.creditPlanIcon}><Icon size={19} /></div>
+                  <div className={styles.creditPlanName}>{plan.name}</div>
+                  <div className={styles.creditPlanCredits}>{plan.credits.toLocaleString('zh-CN')} <span>积分</span></div>
+                  <p>{plan.description}</p>
+                  <div className={styles.creditPlanPrice}><strong>{formatPrice(plan.price)}</strong><span>一次性</span></div>
+                  <button
+                    type="button"
+                    className={`${isSelected ? shared.primaryAction : shared.secondaryAction} ${styles.planChoiceButton}`}
+                    onClick={() => setSelectedPlanId(plan.id)}
+                    aria-pressed={isSelected}
+                  >
+                    {isSelected ? <Check size={15} /> : <Coins size={15} />}
+                    {isSelected ? '已选择' : '选择套餐'}
+                  </button>
+                </article>
+              );
+            })}
           </div>
-        </div>
-          <div className={`${shared.plainPanel} ${styles.balanceNote}`}>
-            <div className={shared.plainPanelHeading}>
-              <div>
-                <div className={shared.panelKicker}>ACCOUNT NOTE</div>
-                <h2>账户化积分</h2>
-              </div>
-              <Check size={18} />
+        </section>
+
+        <aside className={styles.paymentPanel} aria-label="充值订单摘要">
+          <div className={styles.paymentPanelHeader}>
+            <div>
+              <div className={shared.panelKicker}>ORDER SUMMARY</div>
+              <h2>订单摘要</h2>
             </div>
-            <p>当前充值为 mock 入账，余额和流水已按当前账户保存在 PostgreSQL 中，后续可替换为真实支付回调。</p>
+            <span className={styles.paymentReady}><ShieldCheck size={14} /> 安全支付</span>
           </div>
-      </section>
+
+          <div className={styles.orderPlan}>
+            <div className={styles.orderPlanIcon}><SelectedPlanIcon size={18} /></div>
+            <div className={styles.orderPlanCopy}>
+              <span>{selectedPlan.name}</span>
+              <strong>{selectedPlan.credits.toLocaleString('zh-CN')} 积分</strong>
+            </div>
+            <button
+              type="button"
+              className={styles.changePlanButton}
+              onClick={() => document.querySelector(`.${styles.planPicker}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            >
+              更换
+            </button>
+          </div>
+
+          <div className={styles.paymentBlock}>
+            <div className={styles.paymentBlockHeading}>
+              <span>支付方式</span>
+              <small>选择一种方式完成充值</small>
+            </div>
+            <div className={styles.paymentMethods}>
+              {PAYMENT_METHODS.map(method => {
+                const Icon = method.icon;
+                const isSelected = method.id === selectedPaymentMethod;
+                return (
+                  <button
+                    key={method.id}
+                    type="button"
+                    className={`${styles.paymentMethod} ${isSelected ? styles.isSelected : ''}`}
+                    onClick={() => setSelectedPaymentMethod(method.id)}
+                    aria-pressed={isSelected}
+                >
+                    <span className={`${styles.paymentMethodIcon} ${method.logo ? styles.hasPaymentLogo : ''}`}>
+                      {method.logo ? (
+                        <img src={method.logo} alt="" aria-hidden="true" />
+                      ) : (
+                        <Icon size={17} />
+                      )}
+                    </span>
+                    <span className={styles.paymentMethodCopy}>
+                      <strong>{method.name}</strong>
+                      <small>{method.description}</small>
+                    </span>
+                    <span className={styles.paymentMethodCheck}>
+                      {isSelected ? <Check size={14} /> : null}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className={styles.orderLines}>
+            <div><span>充值积分</span><strong>{selectedPlan.credits.toLocaleString('zh-CN')} 积分</strong></div>
+            <div><span>支付方式</span><strong>{selectedPaymentLabel}</strong></div>
+          </div>
+
+          <div className={styles.orderTotal}>
+            <span>应付金额</span>
+            <strong>{formatPrice(selectedPlan.price)}</strong>
+          </div>
+
+          <button
+            type="button"
+            className={`${shared.primaryAction} ${styles.paymentSubmit}`}
+            onClick={() => onRecharge(selectedPlan, selectedPaymentMethod)}
+          >
+            <Zap size={16} />
+            确认充值
+          </button>
+
+          <p className={styles.paymentNote}>
+            <ShieldCheck size={14} />
+            <span>当前为演示支付，确认后积分会即时入账。</span>
+          </p>
+        </aside>
+      </div>
     </div>
   );
 }

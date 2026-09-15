@@ -21,6 +21,12 @@
   gap: 13px;
 }
 
+.profileCard,
+.contactCard,
+.securityCard {
+  min-width: 0;
+}
+
 .profileCardHead {
   display: flex;
   align-items: center;
@@ -33,6 +39,7 @@
   display: grid;
   width: 54px;
   height: 54px;
+  flex: 0 0 auto;
   place-items: center;
   border: 1px solid rgba(130, 229, 27, 0.7);
   border-radius: 50%;
@@ -42,7 +49,9 @@
   font-weight: 900;
 }
 
-.profileCard h2 {
+.profileCard h2,
+.contactCard h2,
+.securityCard h2 {
   margin: 4px 0 0;
   color: var(--text);
   font-size: 21px;
@@ -58,75 +67,120 @@
   font-weight: 800;
 }
 
-.profileFields {
+.settingsForm,
+.passwordForm {
   display: grid;
   gap: 14px;
+}
+
+.settingsForm {
   margin-top: 18px;
 }
 
-.profileStatus {
-  display: flex;
+.labelWithStatus {
+  display: flex !important;
   align-items: center;
-  gap: 7px;
-  margin-top: 18px;
-  color: var(--lime);
-  font-size: 10px;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.connectionCard {
-  min-height: 271px;
-}
-
-.connectionState {
+.labelWithStatus > span:first-child {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+}
+
+.bindingStatus {
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
   color: var(--muted);
-  font-size: 10px;
+  font-family: var(--mono);
+  font-size: 9px;
   font-weight: 800;
 }
 
-.connectionStateOnline {
+.bindingStatusSet {
+  border-color: rgba(130, 229, 27, 0.3);
   color: var(--lime);
 }
 
-.apiKeyField {
-  margin-top: 20px;
-}
-
-.apiKeyField input {
-  font-family: var(--mono);
-  font-size: 10px;
-}
-
-.connectionNote {
-  margin: 10px 0 0;
+.formHint {
+  margin: -3px 0 0;
   color: var(--muted);
   font-size: 10px;
   line-height: 1.6;
 }
 
-.connectionHealth {
+.feedback {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 7px;
-  margin-top: 23px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-  color: var(--text-soft);
+  margin-top: -2px;
   font-size: 10px;
+  line-height: 1.5;
 }
 
-.healthDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--orange);
+.feedbackSuccess {
+  color: var(--lime);
 }
 
-.healthDotOnline {
-  background: var(--lime);
-  box-shadow: 0 0 8px rgba(130, 229, 27, 0.68);
+.feedbackError {
+  color: var(--red);
+}
+
+.securityCard {
+  display: grid;
+  gap: 20px;
+}
+
+.securityLayout {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.75fr) minmax(0, 1.25fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.securityIntro {
+  display: flex;
+  gap: 12px;
+  color: var(--text-soft);
+}
+
+.securityIntro strong {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.securityIntro p {
+  max-width: 250px;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.securityIcon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(130, 229, 27, 0.32);
+  border-radius: 8px;
+  color: var(--lime);
+  background: rgba(130, 229, 27, 0.08);
+}
+
+.passwordForm {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.passwordForm button,
+.passwordForm .feedback {
+  grid-column: 1 / -1;
+  justify-self: start;
 }
 
 .emptyAccountPanel {
@@ -173,9 +227,25 @@
   line-height: 1.65;
 }
 
+@media (max-width: 900px) {
+  .securityLayout {
+    grid-template-columns: 1fr;
+    gap: 19px;
+  }
+}
+
 @media (max-width: 620px) {
   .profileGrid {
     grid-template-columns: 1fr;
+  }
+
+  .passwordForm {
+    grid-template-columns: 1fr;
+  }
+
+  .passwordForm button,
+  .passwordForm .feedback {
+    grid-column: auto;
   }
 
   .emptyAccountPanel {

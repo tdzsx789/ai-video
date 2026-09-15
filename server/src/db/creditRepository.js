@@ -178,7 +178,7 @@ export async function refundGeneration({
   });
 }
 
-export async function rechargeCredits({ userId, plan, idempotencyKey }) {
+export async function rechargeCredits({ userId, plan, paymentMethod = 'wechat', idempotencyKey }) {
   return withTransaction(async client => {
     const { rows: orderRows } = await client.query(
       `INSERT INTO recharge_orders (
@@ -194,7 +194,7 @@ export async function rechargeCredits({ userId, plan, idempotencyKey }) {
         plan.id,
         plan.credits,
         plan.amountCents,
-        JSON.stringify(safeJson({ planId: plan.id, mock: true }, 8 * 1024)),
+        JSON.stringify(safeJson({ planId: plan.id, paymentMethod, mock: true }, 8 * 1024)),
         `dev:${userId}:${idempotencyKey}`,
       ],
     );
@@ -238,7 +238,12 @@ export async function rechargeCredits({ userId, plan, idempotencyKey }) {
         `recharge:${orderRows[0].id}`,
         orderRows[0].id,
         `模拟充值 ${plan.credits} 积分`,
-        JSON.stringify(safeJson({ planId: plan.id, amountCents: plan.amountCents, mock: true }, 8 * 1024)),
+        JSON.stringify(safeJson({
+          planId: plan.id,
+          amountCents: plan.amountCents,
+          paymentMethod,
+          mock: true,
+        }, 8 * 1024)),
       ],
     );
     await client.query(

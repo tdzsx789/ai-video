@@ -20,6 +20,50 @@
   white-space: nowrap;
 }
 
+.pricingSwitcher {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 430px);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 21, 17, 0.88);
+}
+
+.pricingTab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.pricingTab:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.pricingTabActive {
+  border-color: rgba(130, 229, 27, 0.58);
+  color: #071006;
+  background: var(--lime);
+  box-shadow: 0 0 20px rgba(130, 229, 27, 0.12);
+}
+
+.pricingTabActive:hover {
+  color: #071006;
+  background: var(--lime-bright);
+}
+
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -224,6 +268,10 @@
 }
 
 @media (max-width: 620px) {
+  .pricingSwitcher {
+    width: 100%;
+  }
+
   .summaryGrid {
     grid-template-columns: 1fr;
   }

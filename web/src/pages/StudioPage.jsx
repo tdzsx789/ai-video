@@ -7,6 +7,7 @@ import {
   Database,
   Download,
   ExternalLink,
+  KeyRound,
   Server,
   ShieldCheck,
 } from 'lucide-react';
@@ -178,6 +179,7 @@ export default function StudioPage({
   apiKey,
   onApiKeyChange,
   onSaveUser,
+  onChangePassword,
   onCreditsChange,
 }) {
   const [form, setForm] = useState(initialForm);
@@ -464,6 +466,27 @@ export default function StudioPage({
             generating={generating}
             form={form}
           />
+          <section className={styles.apiKeyPanel}>
+            <div className={styles.apiKeyPanelHeading}>
+              <div>
+                <div className={shared.panelKicker}>CREATION ACCESS</div>
+                <h3>生成密钥</h3>
+              </div>
+              <KeyRound size={16} />
+            </div>
+            <label className={shared.fieldLabel}>
+              <span><KeyRound size={13} /> API Key</span>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={event => onApiKeyChange(event.target.value)}
+                placeholder="使用服务端配置或输入临时密钥"
+                autoComplete="off"
+                spellCheck="false"
+              />
+            </label>
+            <p className={styles.apiKeyPanelNote}>仅用于当前浏览器会话的生成请求，不会写入账户数据库或历史记录。</p>
+          </section>
           <div className={styles.sideNote}>
             <div className={styles.sideNoteIcon}><ShieldCheck size={16} /></div>
             <div>
@@ -539,10 +562,8 @@ export default function StudioPage({
         {activeSection === 'profile' ? (
           <ProfilePage
             user={user}
-            apiKey={apiKey}
-            onApiKeyChange={onApiKeyChange}
-            health={health}
             onSave={onSaveUser}
+            onChangePassword={onChangePassword}
             onOpenAuth={onOpenAuth}
             onLogout={onLogout}
           />

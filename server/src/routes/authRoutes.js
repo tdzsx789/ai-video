@@ -3,6 +3,7 @@ import { config } from '../config/env.js';
 import {
   createSession,
   findUserByUsername,
+  mapUser,
   revokeSession,
 } from '../db/authRepository.js';
 import { getCreditSnapshot } from '../db/creditRepository.js';
@@ -46,13 +47,7 @@ authRouter.post('/login', async (req, res, next) => {
     res.setHeader('Set-Cookie', sessionCookie(session.token, session.expiresAt));
     res.json({
       ok: true,
-      user: {
-        id: user.id,
-        username: user.username,
-        name: user.name,
-        email: user.email,
-        createdAt: user.created_at?.toISOString?.() || user.created_at || '',
-      },
+      user: mapUser(user),
       credits,
     });
   } catch (error) {

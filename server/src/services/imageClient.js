@@ -143,7 +143,7 @@ function errorSummary(response, payload = {}) {
     return {
       code: 'InvalidToken',
       title: '鉴权失败',
-      message: 'API Key 无效或已失效，请检查服务端 OPENAI_NEXT_API_KEY 或用户中心临时密钥。',
+      message: 'API Key 无效或已失效，请检查服务端 OPENAI_NEXT_API_KEY 或创作工作区中的生成密钥。',
     };
   }
 
