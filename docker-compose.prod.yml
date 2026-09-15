@@ -7,6 +7,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-seedance}
       POSTGRES_USER: ${POSTGRES_USER:-seedance}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-seedance_dev}
+    ports:
+      - "${POSTGRES_BIND:-127.0.0.1:5434}:5432"
     volumes:
       - ai_video_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -27,7 +29,7 @@ services:
       HOST: 0.0.0.0
       PORT: 8787
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:-postgresql://seedance:seedance_dev@postgres:5432/seedance}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-seedance}:${POSTGRES_PASSWORD:-seedance_dev}@postgres:5432/${POSTGRES_DB:-seedance}
       WEB_ORIGIN: ${WEB_ORIGIN:-http://121.41.0.15:30081}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-0}
     depends_on:
