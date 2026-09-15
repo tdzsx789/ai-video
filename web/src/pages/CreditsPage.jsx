@@ -81,16 +81,16 @@ export default function CreditsPage({ credits, onRecharge }) {
             <div><span>失败任务</span><strong>不扣除积分</strong></div>
           </div>
         </div>
-        <div className={`${shared.plainPanel} ${styles.balanceNote}`}>
-          <div className={shared.plainPanelHeading}>
-            <div>
-              <div className={shared.panelKicker}>ACCOUNT NOTE</div>
-              <h2>本地演示状态</h2>
+          <div className={`${shared.plainPanel} ${styles.balanceNote}`}>
+            <div className={shared.plainPanelHeading}>
+              <div>
+                <div className={shared.panelKicker}>ACCOUNT NOTE</div>
+                <h2>账户化积分</h2>
+              </div>
+              <Check size={18} />
             </div>
-            <Check size={18} />
+            <p>当前充值为 mock 入账，余额和流水已按当前账户保存在 PostgreSQL 中，后续可替换为真实支付回调。</p>
           </div>
-          <p>当前充值会保存在本机浏览器中。接入正式账户与支付后，可无缝替换为真实余额。</p>
-        </div>
       </section>
     </div>
   );

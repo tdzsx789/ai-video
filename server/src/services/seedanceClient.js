@@ -1,4 +1,6 @@
 import { config } from '../config/env.js';
+import { safeExternalText } from '../db/safeJson.js';
+import { readResponseText } from './http.js';
 
 const terminalStatuses = new Set(['completed', 'succeeded', 'failed', 'cancelled', 'canceled', 'expired']);
 
@@ -53,7 +55,7 @@ function errorSummary(response, payload = {}) {
   const source = `${JSON.stringify(decoded)}\n${response?.raw || ''}`;
   const node = findErrorNode(decoded);
   const code = String(node?.code || '').trim();
-  const message = String(node?.message || node?.description || '').trim();
+  const message = safeExternalText(node?.message || node?.description || '');
 
   if (/ModelNotOpen|has not activated the model/i.test(source)) {
     return {
@@ -95,7 +97,7 @@ async function requestJson(url, options = {}) {
       body: options.body,
       signal: controller.signal,
     });
-    const raw = await response.text();
+    const raw = await readResponseText(response, 2 * 1024 * 1024);
     let data = raw;
     try {
       data = raw ? JSON.parse(raw) : null;

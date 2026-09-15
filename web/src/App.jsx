@@ -1,25 +1,32 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AuthModal from './components/AuthModal.jsx';
+import HomePage from './pages/HomePage.jsx';
 import StudioPage from './pages/StudioPage.jsx';
+import { getCurrentUser, login, logout as logoutRequest, recharge, updateProfile } from './lib/api.js';
 import styles from './App.module.css';
-
-function readStored(key, fallback) {
-  try {
-    const value = localStorage.getItem(key);
-    return value ? JSON.parse(value) : fallback;
-  } catch {
-    return fallback;
-  }
-}
 
 export default function App() {
   const [activeSection, setActiveSection] = useState('video');
-  const [user, setUser] = useState(() => readStored('ai_jinchan_user', null));
-  const [credits, setCredits] = useState(() => Number(localStorage.getItem('ai_jinchan_credits') || 860));
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('seedance_api_key') || import.meta.env.VITE_DEFAULT_API_KEY || '');
-  const [authMode, setAuthMode] = useState('login');
+  const [user, setUser] = useState(null);
+  const [credits, setCredits] = useState(0);
+  const [apiKey, setApiKey] = useState(() => import.meta.env.VITE_DEFAULT_API_KEY || '');
+  const [authReady, setAuthReady] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
   const [toast, setToast] = useState('');
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(response => {
+        setUser(response.user);
+        setCredits(Number(response.credits?.balance || 0));
+      })
+      .catch(error => {
+        if (error.status !== 401) setToast(error.message || '读取账户状态失败。');
+      })
+      .finally(() => setAuthReady(true));
+  }, []);
 
   const showToast = message => {
     setToast(message);
@@ -27,45 +34,58 @@ export default function App() {
     showToast.timer = window.setTimeout(() => setToast(''), 3200);
   };
 
-  const openAuth = (mode = 'login') => {
-    setAuthMode(mode);
+  const openAuth = () => {
+    setAuthError('');
     setAuthOpen(true);
   };
 
-  const saveUser = nextUser => {
-    const normalizedUser = {
-      name: nextUser.name?.trim() || nextUser.email?.split('@')[0] || 'AI创作者',
-      email: nextUser.email?.trim() || '',
-    };
-    setUser(normalizedUser);
-    localStorage.setItem('ai_jinchan_user', JSON.stringify(normalizedUser));
-    setAuthOpen(false);
-    showToast(authMode === 'register' ? '账户创建成功，欢迎来到 AI金铲。' : '登录成功，继续开始创作吧。');
+  const handleLogin = async credentials => {
+    setAuthLoading(true);
+    setAuthError('');
+    try {
+      const response = await login(credentials.username, credentials.password);
+      setUser(response.user);
+      setCredits(Number(response.credits?.balance || 0));
+      setAuthOpen(false);
+      setActiveSection('video');
+      showToast('登录成功，继续开始创作吧。');
+    } catch (error) {
+      setAuthError(error.message || '登录失败，请检查账号和密码。');
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
-  const updateUser = patch => {
-    setUser(current => {
-      const next = { ...current, ...patch };
-      localStorage.setItem('ai_jinchan_user', JSON.stringify(next));
-      return next;
-    });
-    showToast('个人资料已更新。');
+  const updateUser = async patch => {
+    try {
+      const response = await updateProfile(patch);
+      setUser(response.user);
+      showToast('个人资料已更新。');
+    } catch (error) {
+      showToast(error.message || '更新个人资料失败。');
+    }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await logoutRequest();
+    } catch {
+      // Clear local UI even if the session was already invalid.
+    }
     setUser(null);
-    localStorage.removeItem('ai_jinchan_user');
+    setCredits(0);
     showToast('已退出当前账户。');
     setActiveSection('video');
   };
 
-  const recharge = plan => {
-    setCredits(current => {
-      const next = current + plan.credits;
-      localStorage.setItem('ai_jinchan_credits', String(next));
-      return next;
-    });
-    showToast(`已模拟充值 ${plan.credits.toLocaleString('zh-CN')} 积分。`);
+  const handleRecharge = async plan => {
+    try {
+      const response = await recharge(plan.id, crypto.randomUUID());
+      setCredits(Number(response.balance || 0));
+      showToast(`已模拟充值 ${plan.credits.toLocaleString('zh-CN')} 积分。`);
+    } catch (error) {
+      showToast(error.message || '充值失败。');
+    }
   };
 
   const navigate = id => {
@@ -73,30 +93,41 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  if (!authReady) {
+    return <div className={styles.authLoading}>正在连接账户服务…</div>;
+  }
+
   return (
     <>
-      <StudioPage
-        activeSection={activeSection}
-        onNavigate={navigate}
-        credits={credits}
-        user={user}
-        onOpenAuth={() => openAuth('login')}
-        onLogout={logout}
-        onRecharge={recharge}
-        apiKey={apiKey}
-        onApiKeyChange={value => {
-          setApiKey(value);
-          localStorage.setItem('seedance_api_key', value);
-        }}
-        onSaveUser={updateUser}
-      />
+      {user ? (
+        <StudioPage
+          activeSection={activeSection}
+          onNavigate={navigate}
+          credits={credits}
+          user={user}
+          onOpenAuth={openAuth}
+          onLogout={logout}
+          onRecharge={handleRecharge}
+          apiKey={apiKey}
+          onApiKeyChange={value => {
+            setApiKey(value);
+          }}
+          onSaveUser={updateUser}
+          onCreditsChange={setCredits}
+        />
+      ) : (
+        <HomePage
+          onLogin={openAuth}
+          onRegister={openAuth}
+        />
+      )}
 
       {authOpen ? (
         <AuthModal
-          mode={authMode}
-          onModeChange={setAuthMode}
           onClose={() => setAuthOpen(false)}
-          onSubmit={saveUser}
+          onSubmit={handleLogin}
+          error={authError}
+          loading={authLoading}
         />
       ) : null}
 

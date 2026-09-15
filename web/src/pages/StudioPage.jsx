@@ -15,6 +15,7 @@ import HistoryList from '../features/history/HistoryList.jsx';
 import GeneratorForm from '../features/generator/GeneratorForm.jsx';
 import ImageGeneratorForm from '../features/generator/ImageGeneratorForm.jsx';
 import CreditsPage from './CreditsPage.jsx';
+import PricingInfoPage from './PricingInfoPage.jsx';
 import ProfilePage from './ProfilePage.jsx';
 import StatusBanner from '../components/StatusBanner.jsx';
 import TaskSummary from '../components/TaskSummary.jsx';
@@ -24,26 +25,29 @@ import shared from '../styles/shared.module.css';
 import styles from './StudioPage.module.css';
 
 const DEFAULT_MODEL = 'doubao-seedance-2-5-260628';
-const DEFAULT_PROMPT = '一个红色立方体在白色桌面上缓慢旋转，柔和棚拍光照，镜头平稳，电影质感。';
 const POLL_INTERVAL = 5000;
 const MAX_POLL_TIME = 30 * 60 * 1000;
 
 function initialForm() {
   return {
     model: DEFAULT_MODEL,
-    prompt: DEFAULT_PROMPT,
+    prompt: '',
     duration: 5,
     resolution: '720P',
     promptExtend: true,
+    omniReferenceTaskType: 'auto',
+    firstFrameUrl: '',
+    lastFrameUrl: '',
     referenceImageUrl: '',
     referenceVideoUrl: '',
     referenceAudioUrl: '',
-    callbackUrl: '',
     returnLastFrame: false,
-    executionExpiresAfter: 172800,
     generateAudio: true,
     ratio: '16:9',
     watermark: false,
+    outputFormat: 'mp4',
+    cameraFixed: false,
+    draft: false,
     seed: '',
     frames: '',
   };
@@ -52,7 +56,7 @@ function initialForm() {
 function initialImageForm() {
   return {
     model: 'gpt-image-2.5',
-    prompt: '一把金色的铲子置于黑曜石台面上，柔和的轮廓光，极简商业摄影，细腻高光。',
+    prompt: '',
     style: 'product',
     ratio: '1:1',
   };
@@ -154,7 +158,6 @@ function ImageResultPanel({ generating, requested, result, error, form, onCopy }
         <div><span>输出画幅</span><strong>{result?.ratio || form.ratio}</strong></div>
         <div><span>图片模型</span><strong>{result?.model || form.model || 'gpt-image-2.5'}</strong></div>
         <div><span>当前状态</span><strong>{stateLabel}</strong></div>
-        <div><span>消耗积分</span><strong>12 积分 / 张</strong></div>
       </div>
       <div className={styles.imageConnectionNote}>
         <ShieldCheck size={15} />
@@ -175,6 +178,7 @@ export default function StudioPage({
   apiKey,
   onApiKeyChange,
   onSaveUser,
+  onCreditsChange,
 }) {
   const [form, setForm] = useState(initialForm);
   const [imageForm, setImageForm] = useState(initialImageForm);
@@ -186,7 +190,7 @@ export default function StudioPage({
   const [imageResult, setImageResult] = useState(null);
   const [imageError, setImageError] = useState('');
   const [task, setTask] = useState(null);
-  const [statusMessage, setStatusMessage] = useState('准备就绪，可以开始生成。');
+  const [statusMessage, setStatusMessage] = useState('');
   const [health, setHealth] = useState(null);
   const pollingRef = useRef(false);
 
@@ -222,6 +226,11 @@ export default function StudioPage({
     setImageForm(current => ({ ...current, ...values }));
   };
 
+  const syncCredits = response => {
+    const balance = response?.balance ?? response?.credits?.balance ?? response?.data?.balance;
+    if (Number.isFinite(Number(balance))) onCreditsChange?.(Number(balance));
+  };
+
   const copyText = async text => {
     try {
       await navigator.clipboard.writeText(text);
@@ -239,6 +248,7 @@ export default function StudioPage({
     while (pollingRef.current && Date.now() - startedAt < MAX_POLL_TIME) {
       try {
         const response = await queryVideoTask(taskId, apiKey);
+        syncCredits(response);
         latest = mergeTaskResponse(latest, response);
         setTask(latest);
 
@@ -269,11 +279,20 @@ export default function StudioPage({
     pollingRef.current = false;
     setStatusMessage('轮询已超时，可以稍后用任务编号继续查询。');
     return latest;
-  }, [apiKey, loadHistory]);
+  }, [apiKey, loadHistory, onCreditsChange]);
 
   const generate = async () => {
-    if (!form.prompt.trim()) {
-      setStatusMessage('请先填写提示词。');
+    const hasCreativeInput = [
+      form.prompt,
+      form.firstFrameUrl,
+      form.lastFrameUrl,
+      form.referenceImageUrl,
+      form.referenceVideoUrl,
+      form.referenceAudioUrl,
+    ].some(value => String(value || '').trim());
+
+    if (!hasCreativeInput) {
+      setStatusMessage('请填写提示词或添加创作素材。');
       return;
     }
 
@@ -283,7 +302,8 @@ export default function StudioPage({
     setStatusMessage('正在提交生成任务…');
 
     try {
-      const response = await createVideoTask(form, apiKey);
+      const response = await createVideoTask(form, apiKey, crypto.randomUUID());
+      syncCredits(response);
       const taskId = response.taskId || response.data?.id || response.data?.task_id || '';
       const initialTask = {
         id: taskId,
@@ -302,6 +322,7 @@ export default function StudioPage({
       setStatusMessage(`任务已创建：${taskId}，正在轮询状态…`);
       await pollTask(taskId, initialTask);
     } catch (error) {
+      syncCredits(error.data);
       setStatusMessage(error.message || '提交生成任务失败。');
     } finally {
       setGenerating(false);
@@ -321,10 +342,13 @@ export default function StudioPage({
     setStatusMessage(`正在调用 ${imageForm.model || 'gpt-image-2.5'} 生成图片…`);
 
     try {
-      const response = await createImage(imageForm, apiKey);
+      const response = await createImage(imageForm, apiKey, crypto.randomUUID());
+      syncCredits(response);
       setImageResult(response.result);
       setStatusMessage('图片生成完成。');
+      await loadHistory();
     } catch (error) {
+      syncCredits(error.data);
       const message = error.message || '图片生成失败。';
       setImageError(message);
       setStatusMessage(message);
@@ -343,7 +367,7 @@ export default function StudioPage({
   };
 
   const clearHistory = async () => {
-    if (!window.confirm('确定要清空全部历史视频地址吗？')) return;
+    if (!window.confirm('确定要清空当前账户的全部历史创作吗？')) return;
     try {
       await deleteHistory();
       setHistory([]);
@@ -361,7 +385,7 @@ export default function StudioPage({
         <div>
           <div className={shared.sectionEyebrow}>CREATION ARCHIVE</div>
           <h1>历史记录</h1>
-          <p>所有完成的视频任务都会自动归档，方便继续查询和复用。</p>
+          <p>所有完成的视频与图片任务都会自动归档，方便回看、复制地址和继续使用。</p>
         </div>
         <div className={styles.headingStat}>
           <Database size={17} />
@@ -388,23 +412,27 @@ export default function StudioPage({
             form={form}
             onChange={setFormValue}
             disabled={generating}
+            onGenerate={generate}
+            generating={generating}
           />
 
-          <section className={styles.statusSection}>
-            <StatusBanner status={currentStatus} message={statusMessage} />
-            {task?.id ? (
-              <div className={styles.taskInline}>
-                <div>
-                  <span>当前任务</span>
-                  <strong>{task.id}</strong>
+          {statusMessage || task?.id ? (
+            <section className={styles.statusSection}>
+              {statusMessage ? <StatusBanner status={currentStatus} message={statusMessage} /> : null}
+              {task?.id ? (
+                <div className={styles.taskInline}>
+                  <div>
+                    <span>当前任务</span>
+                    <strong>{task.id}</strong>
+                  </div>
+                  <button className={shared.inlineAction} type="button" onClick={() => copyText(task.id)} title="复制任务编号">
+                    <Copy size={14} />
+                    复制编号
+                  </button>
                 </div>
-                <button className={shared.inlineAction} type="button" onClick={() => copyText(task.id)} title="复制任务编号">
-                  <Copy size={14} />
-                  复制编号
-                </button>
-              </div>
-            ) : null}
-          </section>
+              ) : null}
+            </section>
+          ) : null}
 
           <section className={styles.historySection}>
             <div className={styles.sectionTrail}>
@@ -433,7 +461,6 @@ export default function StudioPage({
             task={task}
             currentVideoUrl={currentVideoUrl}
             onCopy={copyText}
-            onGenerate={generate}
             generating={generating}
             form={form}
           />
@@ -454,7 +481,15 @@ export default function StudioPage({
                 <Database size={16} />
               </div>
               {visibleHistory.map(item => (
-                <button key={item.id || item.videoUrl} type="button" className={styles.recentItem} onClick={() => item.videoUrl && window.open(item.videoUrl, '_blank', 'noopener,noreferrer')}>
+                <button
+                  key={item.id || item.videoUrl || item.imageUrl}
+                  type="button"
+                  className={styles.recentItem}
+                  onClick={() => {
+                    const url = item.videoUrl || item.imageUrl;
+                    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                  }}
+                >
                   <span className={styles.recentItemStatus} />
                   <span className={styles.recentItemCopy}>
                     <strong>{item.prompt || '未记录提示词'}</strong>
@@ -512,6 +547,7 @@ export default function StudioPage({
             onLogout={onLogout}
           />
         ) : null}
+        {activeSection === 'pricing' ? <PricingInfoPage /> : null}
       </main>
 
       <footer className={styles.appFooter}>

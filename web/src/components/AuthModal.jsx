@@ -1,10 +1,10 @@
-import { AtSign, LockKeyhole, Sparkles, UserRound, X } from 'lucide-react';
+import { KeyRound, LockKeyhole, Sparkles, X } from 'lucide-react';
 import { useState } from 'react';
 import shared from '../styles/shared.module.css';
 import styles from './AuthModal.module.css';
 
-export default function AuthModal({ mode, onModeChange, onClose, onSubmit }) {
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+export default function AuthModal({ onClose, onSubmit, error, loading }) {
+  const [form, setForm] = useState({ username: '', password: '' });
 
   const submit = event => {
     event.preventDefault();
@@ -18,38 +18,18 @@ export default function AuthModal({ mode, onModeChange, onClose, onSubmit }) {
           <X size={17} />
         </button>
         <div className={styles.authModalMark}><img src="/ai-jinchan-logo.png" alt="" /></div>
-        <div className={shared.sectionEyebrow}>{mode === 'register' ? 'CREATE ACCOUNT' : 'WELCOME BACK'}</div>
-        <h2 id="auth-title">{mode === 'register' ? '注册 AI金铲' : '登录 AI金铲'}</h2>
-        <p className={styles.authModalSubtitle}>
-          {mode === 'register' ? '建立你的个人创作空间。' : '继续你的创作工作流。'}
-        </p>
-
-        <div className={styles.authTabs} role="tablist">
-          <button type="button" className={mode === 'login' ? styles.isActive : ''} onClick={() => onModeChange('login')}>登录</button>
-          <button type="button" className={mode === 'register' ? styles.isActive : ''} onClick={() => onModeChange('register')}>注册</button>
-        </div>
+        <div className={shared.sectionEyebrow}>MOCK ACCOUNT</div>
+        <h2 id="auth-title">登录 AI金铲</h2>
+        <p className={styles.authModalSubtitle}>使用已配置的 mock 账户进入创作工作区。</p>
 
         <form onSubmit={submit} className={styles.authForm}>
-          {mode === 'register' ? (
-            <label className={shared.fieldLabel}>
-              <span><UserRound size={13} /> 昵称</span>
-              <input
-                autoFocus
-                value={form.name}
-                onChange={event => setForm(current => ({ ...current, name: event.target.value }))}
-                placeholder="你的创作者昵称"
-                required
-              />
-            </label>
-          ) : null}
           <label className={shared.fieldLabel}>
-            <span><AtSign size={13} /> 邮箱</span>
+            <span><KeyRound size={13} /> 账号</span>
             <input
-              autoFocus={mode === 'login'}
-              type="email"
-              value={form.email}
-              onChange={event => setForm(current => ({ ...current, email: event.target.value }))}
-              placeholder="name@example.com"
+              autoFocus
+              value={form.username}
+              onChange={event => setForm(current => ({ ...current, username: event.target.value }))}
+              placeholder="请输入账号"
               required
             />
           </label>
@@ -59,17 +39,17 @@ export default function AuthModal({ mode, onModeChange, onClose, onSubmit }) {
               type="password"
               value={form.password}
               onChange={event => setForm(current => ({ ...current, password: event.target.value }))}
-              placeholder="至少 6 位字符"
-              minLength={6}
+              placeholder="请输入密码"
               required
             />
           </label>
-          <button type="submit" className={`${shared.primaryAction} ${styles.authSubmit}`}>
+          {error ? <div className={styles.authError} role="alert">{error}</div> : null}
+          <button type="submit" className={`${shared.primaryAction} ${styles.authSubmit}`} disabled={loading}>
             <Sparkles size={16} />
-            {mode === 'register' ? '创建账户' : '进入工作区'}
+            {loading ? '登录中…' : '进入工作区'}
           </button>
         </form>
-        <small className={styles.authModalFootnote}>当前为本地演示注册，正式账户服务可直接接入。</small>
+        <small className={styles.authModalFootnote}>当前使用 mock 账户，后续再接入注册流程。</small>
       </section>
     </div>
   );

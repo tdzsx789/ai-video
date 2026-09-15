@@ -1,5 +1,6 @@
-import { Check, Clipboard, ExternalLink, FileVideo, LoaderCircle, Sparkles } from 'lucide-react';
+import { Clipboard, ExternalLink, FileVideo, LoaderCircle, Sparkles } from 'lucide-react';
 import { formatDate, formatDuration, statusLabel, statusTone } from '../lib/format.js';
+import { getModelLabel } from '../lib/modelLabels.js';
 import shared from '../styles/shared.module.css';
 import styles from './TaskSummary.module.css';
 
@@ -7,7 +8,6 @@ export default function TaskSummary({
   task,
   currentVideoUrl,
   onCopy,
-  onGenerate,
   generating,
   form,
 }) {
@@ -62,7 +62,7 @@ export default function TaskSummary({
       <div className={styles.summaryBlock}>
         <div className={styles.summaryLine}>
           <span>模型</span>
-          <strong>{form.model || '未选择'}</strong>
+          <strong>{getModelLabel(form.model)}</strong>
         </div>
         <div className={styles.summaryLine}>
           <span>输出规格</span>
@@ -87,11 +87,6 @@ export default function TaskSummary({
         <p>{form.prompt || '还没有输入提示词。'}</p>
       </div>
 
-      <button className={`${shared.submitButton} ${styles.summarySubmitButton}`} type="button" onClick={onGenerate} disabled={generating || !form.prompt.trim()}>
-        {generating ? <LoaderCircle className={shared.spin} size={18} /> : <Sparkles size={18} />}
-        {generating ? '正在生成…' : '生成视频'}
-        {!generating ? <Check size={16} className={shared.submitArrow} /> : null}
-      </button>
     </aside>
   );
 }

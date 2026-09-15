@@ -21,12 +21,47 @@ async function parseResponse(response) {
 async function request(url, options = {}) {
   const response = await fetch(url, {
     ...options,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     },
   });
   return parseResponse(response);
+}
+
+export function getCurrentUser() {
+  return request('/api/auth/me');
+}
+
+export function login(username, password) {
+  return request('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export function logout() {
+  return request('/api/auth/logout', { method: 'POST' });
+}
+
+export function updateProfile(profile) {
+  return request('/api/account/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(profile),
+  });
+}
+
+export function getCredits() {
+  return request('/api/account/credits');
+}
+
+export function recharge(planId, idempotencyKey) {
+  return request('/api/account/recharge', {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify({ planId }),
+  });
 }
 
 export function getHistory() {
@@ -37,16 +72,18 @@ export function deleteHistory() {
   return request('/api/history', { method: 'DELETE' });
 }
 
-export function createVideoTask(payload, apiKey) {
+export function createVideoTask(payload, apiKey, idempotencyKey) {
   return request('/api/generate', {
     method: 'POST',
+    headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {},
     body: JSON.stringify({ ...payload, apiKey }),
   });
 }
 
-export function createImage(payload, apiKey) {
+export function createImage(payload, apiKey, idempotencyKey) {
   return request('/api/images/generate', {
     method: 'POST',
+    headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {},
     body: JSON.stringify({ ...payload, apiKey }),
   });
 }

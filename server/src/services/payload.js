@@ -76,6 +76,10 @@ function modelCapabilities(model) {
       supportsFlex: false,
       supportsPriority: true,
       supportsOmniReferenceTaskType: true,
+      supportsReferenceImages: true,
+      supportsReferenceVideo: true,
+      supportsReferenceAudio: true,
+      supportsAudioOnlyReference: true,
     };
   }
 
@@ -97,6 +101,10 @@ function modelCapabilities(model) {
       supportsFlex: false,
       supportsPriority: true,
       supportsOmniReferenceTaskType: false,
+      supportsReferenceImages: true,
+      supportsReferenceVideo: true,
+      supportsReferenceAudio: true,
+      supportsAudioOnlyReference: false,
     };
   }
 
@@ -117,6 +125,10 @@ function modelCapabilities(model) {
       supportsFlex: true,
       supportsPriority: false,
       supportsOmniReferenceTaskType: false,
+      supportsReferenceImages: false,
+      supportsReferenceVideo: false,
+      supportsReferenceAudio: false,
+      supportsAudioOnlyReference: false,
     };
   }
 
@@ -137,6 +149,10 @@ function modelCapabilities(model) {
       supportsFlex: true,
       supportsPriority: false,
       supportsOmniReferenceTaskType: false,
+      supportsReferenceImages: false,
+      supportsReferenceVideo: false,
+      supportsReferenceAudio: false,
+      supportsAudioOnlyReference: false,
     };
   }
 
@@ -156,6 +172,10 @@ function modelCapabilities(model) {
     supportsFlex: false,
     supportsPriority: false,
     supportsOmniReferenceTaskType: false,
+    supportsReferenceImages: false,
+    supportsReferenceVideo: false,
+    supportsReferenceAudio: false,
+    supportsAudioOnlyReference: false,
   };
 }
 
@@ -238,32 +258,84 @@ function normalizeContentItem(item) {
   return null;
 }
 
-function normalizeContent(input, prompt) {
+function filterContent(content, capabilities, taskType) {
+  let filtered = content.filter(item => {
+    if (item.type === 'image_url' && item.role === 'reference_image') {
+      return capabilities.supportsReferenceImages;
+    }
+    if (item.type === 'video_url') return capabilities.supportsReferenceVideo;
+    if (item.type === 'audio_url') return capabilities.supportsReferenceAudio;
+    if (item.type === 'draft_task') return capabilities.supportsDraft;
+    return true;
+  });
+
+  if (capabilities.supportsOmniReferenceTaskType && ['edit', 'extend'].includes(taskType)) {
+    filtered = filtered.filter(item => item.type === 'text' || item.type === 'video_url');
+  } else if (capabilities.supportsOmniReferenceTaskType && taskType === 'reference') {
+    filtered = filtered.filter(item => item.type !== 'image_url' || item.role === 'reference_image');
+  } else if (filtered.some(item => (
+    item.type === 'image_url' && ['first_frame', 'last_frame'].includes(item.role)
+  ))) {
+    filtered = filtered.filter(item => (
+      item.type !== 'video_url'
+      && item.type !== 'audio_url'
+      && !(item.type === 'image_url' && item.role === 'reference_image')
+    ));
+  }
+
+  return filtered;
+}
+
+function normalizeContent(input, prompt, capabilities, taskType) {
   const providedContent = Array.isArray(input.content)
     ? input.content.map(normalizeContentItem).filter(Boolean)
     : [];
-  if (providedContent.length) return providedContent;
+  if (providedContent.length) return filterContent(providedContent, capabilities, taskType);
 
   const content = [];
   if (prompt) content.push({ type: 'text', text: prompt });
 
-  splitResources(input.firstFrameUrl || input.first_frame_url)
-    .forEach(url => content.push({ type: 'image_url', image_url: { url }, role: 'first_frame' }));
-  splitResources(input.lastFrameUrl || input.last_frame_url)
-    .forEach(url => content.push({ type: 'image_url', image_url: { url }, role: 'last_frame' }));
-  splitResources(input.referenceImageUrls || input.reference_image_urls || input.referenceImageUrl || input.reference_image_url)
-    .forEach(url => content.push({ type: 'image_url', image_url: { url }, role: 'reference_image' }));
-  splitResources(input.referenceVideoUrls || input.reference_video_urls || input.referenceVideoUrl || input.reference_video_url)
-    .forEach(url => content.push({ type: 'video_url', video_url: { url }, role: 'reference_video' }));
-  splitResources(input.referenceAudioUrls || input.reference_audio_urls || input.referenceAudioUrl || input.reference_audio_url)
-    .forEach(url => content.push({ type: 'audio_url', audio_url: { url }, role: 'reference_audio' }));
+  const firstFrameUrls = splitResources(input.firstFrameUrl || input.first_frame_url);
+  const lastFrameUrls = splitResources(input.lastFrameUrl || input.last_frame_url);
+  const referenceImageUrls = splitResources(
+    input.referenceImageUrls
+      || input.reference_image_urls
+      || input.referenceImageUrl
+      || input.reference_image_url,
+  );
+  const referenceVideoUrls = splitResources(
+    input.referenceVideoUrls
+      || input.reference_video_urls
+      || input.referenceVideoUrl
+      || input.reference_video_url,
+  );
+  const referenceAudioUrls = splitResources(
+    input.referenceAudioUrls
+      || input.reference_audio_urls
+      || input.referenceAudioUrl
+      || input.reference_audio_url,
+  );
+
+  if (!capabilities.supportsOmniReferenceTaskType || taskType === 'auto') {
+    firstFrameUrls.forEach(url => content.push({ type: 'image_url', image_url: { url }, role: 'first_frame' }));
+    lastFrameUrls.forEach(url => content.push({ type: 'image_url', image_url: { url }, role: 'last_frame' }));
+  }
+  if (!capabilities.supportsOmniReferenceTaskType || taskType === 'auto' || taskType === 'reference') {
+    referenceImageUrls.forEach(url => content.push({ type: 'image_url', image_url: { url }, role: 'reference_image' }));
+  }
+  if (!capabilities.supportsOmniReferenceTaskType || ['auto', 'reference', 'edit', 'extend'].includes(taskType)) {
+    referenceVideoUrls.forEach(url => content.push({ type: 'video_url', video_url: { url }, role: 'reference_video' }));
+  }
+  if (!capabilities.supportsOmniReferenceTaskType || taskType === 'auto' || taskType === 'reference') {
+    referenceAudioUrls.forEach(url => content.push({ type: 'audio_url', audio_url: { url }, role: 'reference_audio' }));
+  }
 
   const draftTaskId = String(input.draftTaskId || input.draft_task_id || '').trim();
   if (draftTaskId) {
     content.push({ type: 'draft_task', draft_task: { id: draftTaskId } });
   }
 
-  return content;
+  return filterContent(content, capabilities, taskType);
 }
 
 function normalizeSafetyIdentifier(value) {
@@ -300,25 +372,48 @@ function legacyPayload(input, prompt) {
 
 export function normalizeVideoPayload(input = {}) {
   const prompt = String(input.prompt || input.text || '').trim();
-  if (!prompt && !Array.isArray(input.content)) throw new Error('请先填写提示词。');
-
   const model = String(input.model || defaultModel).trim();
   const capabilities = modelCapabilities(model);
+  const hasStructuredContent = Array.isArray(input.content) && input.content.length > 0;
+  const hasResourceInput = [
+    input.firstFrameUrl,
+    input.first_frame_url,
+    input.lastFrameUrl,
+    input.last_frame_url,
+    input.referenceImageUrls,
+    input.reference_image_urls,
+    input.referenceImageUrl,
+    input.reference_image_url,
+    input.referenceVideoUrls,
+    input.reference_video_urls,
+    input.referenceVideoUrl,
+    input.reference_video_url,
+    input.referenceAudioUrls,
+    input.reference_audio_urls,
+    input.referenceAudioUrl,
+    input.reference_audio_url,
+    input.draftTaskId,
+    input.draft_task_id,
+  ].some(value => Array.isArray(value) ? value.length > 0 : String(value || '').trim());
+
+  if (!prompt && !hasStructuredContent && (!capabilities.family || !hasResourceInput)) {
+    throw new Error('请先填写提示词。');
+  }
   if (!capabilities.family) return legacyPayload(input, prompt);
 
-  const duration = normalizeDuration(input.duration, capabilities);
+  let duration = normalizeDuration(input.duration, capabilities);
   const frames = normalizeFrames(input.frames);
-  const ratio = normalizeRatio(input.ratio, capabilities);
-  const resolution = normalizeResolution(
+  let ratio = normalizeRatio(input.ratio, capabilities);
+  let resolution = normalizeResolution(
     input.resolution || input.metadata?.parameters?.resolution,
     capabilities,
   );
   const promptExtend = boolean(input.promptExtend ?? input.prompt_extend, true);
   const generateAudio = boolean(input.generateAudio ?? input.generate_audio, true);
   const watermark = boolean(input.watermark, false);
-  const returnLastFrame = boolean(input.returnLastFrame ?? input.return_last_frame, false);
-  const draft = boolean(input.draft, false);
-  const serviceTier = input.serviceTier === 'flex' || input.service_tier === 'flex' ? 'flex' : 'default';
+  let returnLastFrame = boolean(input.returnLastFrame ?? input.return_last_frame, false);
+  let draft = boolean(input.draft, false);
+  let serviceTier = input.serviceTier === 'flex' || input.service_tier === 'flex' ? 'flex' : 'default';
   const outputFormat = input.outputFormat === 'mov' || input.output_format === 'mov' ? 'mov' : 'mp4';
   const omniReferenceTaskType = ['auto', 'reference', 'edit', 'extend'].includes(
     input.omniReferenceTaskType || input.omni_reference_task_type,
@@ -336,7 +431,44 @@ export function normalizeVideoPayload(input = {}) {
   const priority = Math.min(Math.max(integer(input.priority, 0), 0), 9);
   const seed = normalizeSeed(input.seed);
   const safetyIdentifier = normalizeSafetyIdentifier(input.safetyIdentifier || input.safety_identifier);
-  const content = normalizeContent(input, prompt);
+  const content = normalizeContent(input, prompt, capabilities, omniReferenceTaskType);
+
+  const hasFirstFrame = content.some(item => item.type === 'image_url' && item.role === 'first_frame');
+  const hasLastFrame = content.some(item => item.type === 'image_url' && item.role === 'last_frame');
+  const hasReferenceVideo = content.some(item => item.type === 'video_url');
+  const hasReferenceAudio = content.some(item => item.type === 'audio_url');
+  const hasVisualReference = content.some(item => (
+    item.type === 'image_url' || item.type === 'video_url'
+  ));
+  const hasReferenceAsset = content.some(item => (
+    item.type === 'image_url'
+    || item.type === 'video_url'
+    || item.type === 'audio_url'
+  ));
+
+  if (!content.length) throw new Error('请填写提示词或添加创作素材。');
+  if (hasLastFrame && !hasFirstFrame) throw new Error('尾帧图片需要同时提供首帧图片。');
+  if (hasReferenceAudio && !hasVisualReference && !capabilities.supportsAudioOnlyReference) {
+    throw new Error('当前 Seedance 版本的参考音频需要同时提供参考图片或参考视频。');
+  }
+  if (capabilities.supportsOmniReferenceTaskType && omniReferenceTaskType === 'reference' && !hasReferenceAsset) {
+    throw new Error('基于素材创作需要至少添加一项图片、视频或音频素材。');
+  }
+  if (capabilities.supportsOmniReferenceTaskType && ['edit', 'extend'].includes(omniReferenceTaskType) && !hasReferenceVideo) {
+    throw new Error('视频编辑或延展需要添加参考视频。');
+  }
+
+  if (capabilities.supportsOmniReferenceTaskType && ['edit', 'extend'].includes(omniReferenceTaskType)) {
+    ratio = 'adaptive';
+  }
+  if (capabilities.supportsOmniReferenceTaskType && omniReferenceTaskType === 'edit') {
+    duration = -1;
+  }
+  if (capabilities.supportsDraft && draft) {
+    resolution = '480p';
+    returnLastFrame = false;
+    serviceTier = 'default';
+  }
 
   const payload = {
     model,

@@ -17,8 +17,8 @@ export default function HistoryList({
       <div className={styles.historyPanelHeader}>
         <div>
           <div className={shared.panelKicker}>PERSISTED LIBRARY</div>
-          <h3>历史视频地址</h3>
-          <p>{items.length} 条记录保存在 PostgreSQL 中</p>
+          <h3>历史记录</h3>
+          <p>{items.length} 条视频与图片记录保存在 PostgreSQL 中</p>
         </div>
         <div className={styles.historyPanelActions}>
           <button type="button" className={styles.iconButton} onClick={onRefresh} disabled={loading} title="刷新历史记录" aria-label="刷新历史记录">

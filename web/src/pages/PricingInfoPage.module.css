@@ -1,0 +1,242 @@
+.pricingPage {
+  width: 100%;
+  max-width: 1180px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.mockBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 37px;
+  padding: 0 12px;
+  border: 1px solid rgba(130, 229, 27, 0.42);
+  border-radius: 7px;
+  color: var(--lime);
+  background: rgba(130, 229, 27, 0.08);
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.summaryCard {
+  display: grid;
+  gap: 9px;
+  min-height: 114px;
+  align-content: center;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 21, 17, 0.88);
+}
+
+.summaryCard svg {
+  color: var(--lime);
+}
+
+.summaryCard span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.summaryCard strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.pricingSection {
+  padding: 21px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 21, 17, 0.7);
+}
+
+.pricingSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 17px;
+}
+
+.sectionIcon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 8px;
+  color: #071006;
+  background: var(--lime);
+}
+
+.pricingSectionHeader h2 {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.tableShell {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.tableHeader,
+.pricingRow {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.75fr) minmax(190px, 1.15fr) minmax(120px, 0.85fr) minmax(110px, 0.65fr) minmax(220px, 1.35fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.tableHeader {
+  min-height: 43px;
+  padding: 0 16px;
+  color: var(--lime);
+  background: rgba(130, 229, 27, 0.08);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.tableBody {
+  display: grid;
+}
+
+.pricingRow {
+  min-height: 74px;
+  padding: 13px 16px;
+  background: rgba(8, 11, 8, 0.35);
+}
+
+.pricingRow + .pricingRow {
+  border-top: 1px solid var(--line-soft);
+}
+
+.pricingRow > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.pricingRow small,
+.creditCell small {
+  display: none;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.pricingRow strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.creditCell strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--lime);
+  font-family: var(--mono);
+}
+
+.pricingRow p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.noticePanel {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(91, 216, 239, 0.3);
+  border-radius: 8px;
+  background: rgba(91, 216, 239, 0.06);
+}
+
+.noticePanel svg {
+  flex: 0 0 auto;
+  color: var(--cyan);
+}
+
+.noticePanel h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.noticePanel p {
+  margin: 7px 0 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+@media (max-width: 980px) {
+  .tableHeader {
+    display: none;
+  }
+
+  .tableBody {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .pricingRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 13px;
+    min-height: 0;
+    padding: 14px;
+    border: 1px solid var(--line-soft);
+    border-radius: 7px;
+    background: rgba(8, 11, 8, 0.52);
+  }
+
+  .pricingRow + .pricingRow {
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .pricingRow small,
+  .creditCell small {
+    display: block;
+  }
+
+  .pricingRow p {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 620px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .pricingSection {
+    padding: 15px;
+  }
+
+  .pricingRow {
+    grid-template-columns: 1fr;
+  }
+
+  .pricingRow strong {
+    white-space: normal;
+  }
+}

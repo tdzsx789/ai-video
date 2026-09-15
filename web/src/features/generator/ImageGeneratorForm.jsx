@@ -102,10 +102,8 @@ export default function ImageGeneratorForm({
           />
           <div className={styles.promptHeaderMeta}>
             <div className={generatorStyles.currentConfigStrip} aria-label="当前图片模型配置">
-              <Check size={13} />
               <span>{selectedTool.label} · {selectedModel}</span>
             </div>
-            <span className={styles.costBadge}><Sparkles size={13} /> 12 积分 / 张</span>
           </div>
         </div>
 
@@ -115,7 +113,7 @@ export default function ImageGeneratorForm({
             <textarea
               value={form.prompt}
               onChange={event => onChange({ prompt: event.target.value })}
-              placeholder="例如：金色的铲子悬浮在黑曜石台面上，边缘有柔和高光，极简商业摄影。"
+              placeholder="请输入画面描述，包含主体、场景、光线和视觉风格"
               disabled={generating}
               spellCheck="false"
             />
@@ -170,7 +168,6 @@ export default function ImageGeneratorForm({
           >
             {generating ? <span className={styles.buttonLoader} /> : <Sparkles size={17} />}
             {generating ? '正在生成…' : '生成图片'}
-            <span className={styles.buttonCost}>12</span>
           </button>
         </div>
       </section>

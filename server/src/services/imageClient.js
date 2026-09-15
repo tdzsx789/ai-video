@@ -1,5 +1,7 @@
 import { config } from '../config/env.js';
+import { safeExternalText } from '../db/safeJson.js';
 import { resolveApiKey } from './seedanceClient.js';
+import { readResponseText } from './http.js';
 
 const stylePrompts = {
   cinematic: '电影感光影，真实镜头语言，细腻景深，高级调色。',
@@ -40,7 +42,7 @@ async function requestJson(url, options = {}) {
       body: options.body,
       signal: controller.signal,
     });
-    const raw = await response.text();
+    const raw = await readResponseText(response, 12 * 1024 * 1024);
     let data = raw;
     try {
       data = raw ? JSON.parse(raw) : null;
@@ -126,10 +128,10 @@ function extractImageValue(value, depth = 0) {
 }
 
 function upstreamErrorMessage(data, raw) {
-  if (data?.error?.message) return data.error.message;
-  if (typeof data?.error === 'string') return data.error;
-  if (data?.message) return data.message;
-  if (typeof raw === 'string' && raw.trim()) return raw.trim();
+  if (data?.error?.message) return safeExternalText(data.error.message);
+  if (typeof data?.error === 'string') return safeExternalText(data.error);
+  if (data?.message) return safeExternalText(data.message);
+  if (typeof raw === 'string' && raw.trim()) return safeExternalText(raw);
   return '';
 }
 
@@ -252,8 +254,11 @@ export async function createImage(apiKey, payload) {
     };
   }
 
+  const revisedPrompt = response.data?.data?.[0]?.revised_prompt || response.data?.revised_prompt || '';
   return {
     ...response,
+    data: null,
+    raw: '',
     result: {
       imageUrl: extracted.imageUrl,
       source: extracted.source,
@@ -261,7 +266,7 @@ export async function createImage(apiKey, payload) {
       size: payload.size,
       ratio: payload.ratio,
       prompt: payload.prompt,
-      revisedPrompt: response.data?.data?.[0]?.revised_prompt || response.data?.revised_prompt || '',
+      revisedPrompt,
       createdAt: new Date().toISOString(),
     },
     error: null,

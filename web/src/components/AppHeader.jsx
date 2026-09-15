@@ -1,6 +1,7 @@
 import {
   Clock3,
   Coins,
+  ReceiptText,
   Image,
   LogIn,
   UserRound,
@@ -14,6 +15,7 @@ const navItems = [
   { id: 'history', label: '历史记录', icon: Clock3 },
   { id: 'credits', label: '充值积分', icon: Coins },
   { id: 'profile', label: '用户中心', icon: UserRound },
+  { id: 'pricing', label: '费用说明', icon: ReceiptText },
 ];
 
 function UserAvatar({ user }) {
@@ -78,7 +80,7 @@ export default function AppHeader({
           ) : (
             <button type="button" className={styles.topLoginAction} onClick={onOpenAuth}>
               <LogIn size={14} />
-              登录 / 注册
+              登录
             </button>
           )}
         </div>

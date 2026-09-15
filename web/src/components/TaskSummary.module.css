@@ -197,10 +197,6 @@
   -webkit-line-clamp: 3;
 }
 
-.summarySubmitButton {
-  grid-column: auto;
-}
-
 @media (max-width: 860px) {
   .summaryCard {
     display: grid;
@@ -212,8 +208,7 @@
   .taskVisual,
   .resultActions,
   .summaryBlock,
-  .summaryPrompt,
-  .summarySubmitButton {
+  .summaryPrompt {
     grid-column: 1 / -1;
   }
 
@@ -235,10 +230,6 @@
 
   .summaryPrompt {
     grid-row: 5;
-  }
-
-  .summarySubmitButton {
-    grid-row: 6;
   }
 }
 

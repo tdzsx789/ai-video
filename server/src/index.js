@@ -2,15 +2,17 @@ import { createServer } from 'node:http';
 import { config } from './config/env.js';
 import { pool } from './db/pool.js';
 import { schemaSql } from './db/schema.js';
+import { seedMockAccounts } from './db/seed.js';
 import { createApp } from './app.js';
 
 try {
   await pool.query(schemaSql);
+  await seedMockAccounts();
   const app = createApp();
   const server = createServer(app);
 
-  server.listen(config.port, '127.0.0.1', () => {
-    console.log(`Seedance Studio API 已启动：http://127.0.0.1:${config.port}`);
+  server.listen(config.port, config.host, () => {
+    console.log(`Seedance Studio API 已启动：http://${config.host}:${config.port}`);
   });
 
   const shutdown = async signal => {

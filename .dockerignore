@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+node_modules
+web/node_modules
+server/node_modules
+web/dist
+server/dist
+server/seedance-history.json
+*.log
+.DS_Store

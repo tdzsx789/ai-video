@@ -1,4 +1,4 @@
-import { Activity, Check, KeyRound, LogOut, Mail, ShieldCheck, UserRound } from 'lucide-react';
+import { Activity, KeyRound, LogOut, Mail, ShieldCheck, UserRound } from 'lucide-react';
 import shared from '../styles/shared.module.css';
 import styles from './ProfilePage.module.css';
 
@@ -18,10 +18,10 @@ export default function ProfilePage({
           <div className={styles.emptyAccountIcon}><UserRound size={25} /></div>
           <div className={`${shared.sectionEyebrow} ${styles.emptyAccountEyebrow}`}>ACCOUNT CENTER</div>
           <h1>登录你的 AI金铲</h1>
-          <p>注册后可以继续完善个人资料，后续同步创作资产与积分。</p>
+          <p>登录后可以继续完善个人资料，并同步创作资产与积分。</p>
           <button type="button" className={shared.primaryAction} onClick={onOpenAuth}>
             <UserRound size={16} />
-            登录 / 注册
+            登录工作区
           </button>
         </section>
       </div>
@@ -54,6 +54,10 @@ export default function ProfilePage({
           </div>
           <div className={styles.profileFields}>
             <label className={shared.fieldLabel}>
+              <span><KeyRound size={13} /> 账号</span>
+              <input value={user.username || ''} readOnly />
+            </label>
+            <label className={shared.fieldLabel}>
               <span><UserRound size={13} /> 昵称</span>
               <input name="name" defaultValue={user.name} onBlur={event => onSave({ name: event.target.value })} />
             </label>
@@ -64,7 +68,7 @@ export default function ProfilePage({
           </div>
           <div className={styles.profileStatus}>
             <ShieldCheck size={15} />
-            <span>账户信息已保存在本机浏览器</span>
+            <span>账户信息已保存在服务端数据库</span>
           </div>
         </section>
 
@@ -90,7 +94,7 @@ export default function ProfilePage({
               spellCheck="false"
             />
           </label>
-          <p className={styles.connectionNote}>密钥仅用于当前设备上的生成请求，不会写入历史记录。</p>
+          <p className={styles.connectionNote}>密钥仅用于当前会话的生成请求，不会写入账户数据库或历史记录。</p>
           <div className={styles.connectionHealth}>
             <span className={`${styles.healthDot} ${health?.ok ? styles.healthDotOnline : ''}`} />
             <span>{health?.ok ? 'Node 服务与数据库连接正常' : '正在检查 Node 服务与数据库'}</span>

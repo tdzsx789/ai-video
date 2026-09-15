@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { config } from '../config/env.js';
 import { resolveApiKey } from '../services/seedanceClient.js';
+import { requireAuth } from '../middleware/auth.js';
 
 export const modelRouter = Router();
+modelRouter.use(requireAuth);
 
 modelRouter.get('/', async (req, res, next) => {
   try {
