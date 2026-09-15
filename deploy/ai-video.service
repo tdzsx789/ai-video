@@ -1,0 +1,15 @@
+[Unit]
+Description=AI Jinchan video workspace
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/ai-video
+ExecStart=/usr/bin/node /opt/ai-video/server/src/index.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
