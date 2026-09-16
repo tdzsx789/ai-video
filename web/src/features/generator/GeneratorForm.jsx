@@ -14,6 +14,7 @@ import styles from './GeneratorForm.module.css';
 
 const LEGACY_DURATION_OPTIONS = [4, 5, 6, 8, 10, 12, 15, 30];
 const LEGACY_RATIO_OPTIONS = ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9'];
+const VIDEO_GENERATION_COST = 30;
 const MODE_OPTIONS = [
   { value: 'auto', label: 'AI 自动判断' },
   { value: 'reference', label: '基于素材创作' },
@@ -558,7 +559,14 @@ export default function GeneratorForm({
             disabled={generating || !hasCreativeInput}
           >
             {generating ? <LoaderCircle className={shared.spin} size={17} /> : <Sparkles size={17} />}
-            {generating ? '正在生成…' : '生成视频'}
+            {generating ? (
+              '正在生成…'
+            ) : (
+              <>
+                <span>生成视频</span>
+                <small className={styles.videoSubmitCost}>{VIDEO_GENERATION_COST} 积分</small>
+              </>
+            )}
           </button>
         </div>
       </section>
