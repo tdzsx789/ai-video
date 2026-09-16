@@ -7,8 +7,7 @@ import {
   Database,
   Download,
   ExternalLink,
-  KeyRound,
-  Server,
+  ScanSearch,
   ShieldCheck,
 } from 'lucide-react';
 import AppHeader from '../components/AppHeader.jsx';
@@ -20,7 +19,8 @@ import PricingInfoPage from './PricingInfoPage.jsx';
 import ProfilePage from './ProfilePage.jsx';
 import StatusBanner from '../components/StatusBanner.jsx';
 import TaskSummary from '../components/TaskSummary.jsx';
-import { createImage, createVideoTask, deleteHistory, getHealth, getHistory, queryVideoTask } from '../lib/api.js';
+import MediaPreviewModal from '../components/MediaPreviewModal.jsx';
+import { createImage, createVideoTask, deleteHistory, getHistory, queryVideoTask } from '../lib/api.js';
 import { formatDate, getTaskStatus, getVideoUrl, TERMINAL_STATUSES } from '../lib/format.js';
 import { getModelLabel } from '../lib/modelLabels.js';
 import shared from '../styles/shared.module.css';
@@ -38,6 +38,8 @@ function initialForm() {
     duration: 5,
     resolution: '720P',
     promptExtend: true,
+    promptOptimizer: true,
+    fastPretreatment: false,
     omniReferenceTaskType: 'auto',
     firstFrameUrl: '',
     lastFrameUrl: '',
@@ -60,8 +62,11 @@ function initialImageForm() {
   return {
     model: 'gpt-image-2.5',
     prompt: '',
-    style: 'product',
-    ratio: '1:1',
+    size: 'auto',
+    quality: 'auto',
+    background: 'auto',
+    outputFormat: 'png',
+    outputCompression: 100,
   };
 }
 
@@ -105,9 +110,25 @@ function imageStateLabel({ generating, result, error, requested }) {
   return requested ? '已提交' : '等待生成';
 }
 
-function ImageResultPanel({ generating, requested, result, error, form, onCopy }) {
+function previewMediaForHistoryItem(item) {
+  const isImage = item?.kind === 'image';
+  const url = isImage ? item?.imageUrl : item?.videoUrl;
+  if (!url) return null;
+  return {
+    type: isImage ? 'image' : 'video',
+    url,
+    title: isImage ? '图片创作结果' : '视频创作结果',
+    alt: 'AI金铲生成结果',
+    prompt: item.prompt,
+    model: item.model ? getModelLabel(item.model) : '',
+    createdAt: formatDate(item.finishedAt || item.createdAt || item.savedAt),
+  };
+}
+
+function ImageResultPanel({ generating, requested, result, error, form, onCopy, onPreview }) {
   const imageUrl = result?.imageUrl || '';
   const hasImage = Boolean(imageUrl);
+  const imageSize = result?.size || form.size || 'auto';
   const stateLabel = imageStateLabel({ generating, result, error, requested });
   const previewClassName = [
     styles.imageResultPreview,
@@ -131,7 +152,22 @@ function ImageResultPanel({ generating, requested, result, error, form, onCopy }
       <div className={previewClassName}>
         <div className={styles.previewGrid} />
         {hasImage ? (
-          <img src={imageUrl} alt="AI金铲生成图片" />
+          <button
+            type="button"
+            className={styles.imageResultPreviewButton}
+            onClick={() => onPreview?.({
+              type: 'image',
+              url: imageUrl,
+              title: '图片生成结果',
+              alt: 'AI金铲生成图片',
+              prompt: form.prompt,
+              model: getModelLabel(result?.model || form.model || 'gpt-image-2.5'),
+            })}
+            aria-label="预览生成图片"
+          >
+            <img src={imageUrl} alt="AI金铲生成图片" />
+            <span className={styles.imageResultPreviewHint}>点击放大预览</span>
+          </button>
         ) : (
           <div className={styles.imageResultPlaceholder}>
             {generating ? (
@@ -150,7 +186,7 @@ function ImageResultPanel({ generating, requested, result, error, form, onCopy }
               <>
                 <CirclePlay size={28} />
                 <strong>提交描述后查看结果</strong>
-                <small>画幅和风格会同步到本次生成任务</small>
+                <small>尺寸、质量和背景会同步到本次生成任务</small>
               </>
             )}
           </div>
@@ -158,6 +194,21 @@ function ImageResultPanel({ generating, requested, result, error, form, onCopy }
       </div>
       {hasImage ? (
         <div className={`${shared.resultActions} ${styles.imageResultActions}`}>
+          <button
+            className={shared.inlineAction}
+            type="button"
+            onClick={() => onPreview?.({
+              type: 'image',
+              url: imageUrl,
+              title: '图片生成结果',
+              alt: 'AI金铲生成图片',
+              prompt: form.prompt,
+              model: getModelLabel(result?.model || form.model || 'gpt-image-2.5'),
+            })}
+          >
+            <ScanSearch size={14} />
+            放大预览
+          </button>
           <a className={shared.inlineAction} href={imageUrl} download="ai-jinchan-image.png">
             <Download size={14} />
             下载图片
@@ -173,13 +224,13 @@ function ImageResultPanel({ generating, requested, result, error, form, onCopy }
         </div>
       ) : null}
       <div className={styles.imageResultMeta}>
-        <div><span>输出画幅</span><strong>{result?.ratio || form.ratio}</strong></div>
+        <div><span>输出尺寸</span><strong>{imageSize}</strong></div>
         <div><span>图片模型</span><strong>{getModelLabel(result?.model || form.model || 'gpt-image-2.5')}</strong></div>
         <div><span>当前状态</span><strong>{stateLabel}</strong></div>
       </div>
       <div className={styles.imageConnectionNote}>
         <ShieldCheck size={15} />
-        <span>{hasImage ? `生成尺寸 ${result?.size || '跟随画幅设置'}，可下载或复制图片地址。` : `${getModelLabel(form.model || 'gpt-image-2.5')} 已接入图片创作链路。`}</span>
+        <span>{hasImage ? `生成尺寸 ${imageSize}，可下载或复制图片地址。` : `${getModelLabel(form.model || 'gpt-image-2.5')} 已接入图片创作链路。`}</span>
       </div>
     </aside>
   );
@@ -193,10 +244,9 @@ export default function StudioPage({
   onOpenAuth,
   onLogout,
   onRecharge,
-  apiKey,
-  onApiKeyChange,
   onSaveUser,
   onChangePassword,
+  onVerifyPassword,
   onCreditsChange,
 }) {
   const [form, setForm] = useState(initialForm);
@@ -209,8 +259,8 @@ export default function StudioPage({
   const [imageResult, setImageResult] = useState(null);
   const [imageError, setImageError] = useState('');
   const [task, setTask] = useState(null);
+  const [previewMedia, setPreviewMedia] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
-  const [health, setHealth] = useState(null);
   const pollingRef = useRef(false);
   const recoveredTaskIdsRef = useRef(new Set());
 
@@ -231,7 +281,6 @@ export default function StudioPage({
 
   useEffect(() => {
     loadHistory();
-    getHealth().then(setHealth).catch(() => setHealth({ ok: false }));
   }, [loadHistory]);
 
   useEffect(() => () => {
@@ -260,6 +309,10 @@ export default function StudioPage({
     }
   };
 
+  const openPreview = media => {
+    if (media?.url) setPreviewMedia(media);
+  };
+
   const pollTask = useCallback(async (taskId, initialTask) => {
     const startedAt = Date.now();
     pollingRef.current = true;
@@ -268,7 +321,7 @@ export default function StudioPage({
 
     while (pollingRef.current && Date.now() - startedAt < MAX_POLL_TIME) {
       try {
-        const response = await queryVideoTask(taskId, apiKey);
+        const response = await queryVideoTask(taskId);
         consecutiveErrors = 0;
         syncCredits(response);
         latest = mergeTaskResponse(latest, response);
@@ -319,7 +372,7 @@ export default function StudioPage({
     pollingRef.current = false;
     setStatusMessage('轮询已超时，可以稍后用任务编号继续查询。');
     return latest;
-  }, [apiKey, loadHistory, onCreditsChange]);
+  }, [loadHistory, onCreditsChange]);
 
   useEffect(() => {
     if (generating || pollingRef.current) return;
@@ -366,7 +419,7 @@ export default function StudioPage({
     setStatusMessage('正在提交生成任务…');
 
     try {
-      const response = await createVideoTask(form, apiKey, crypto.randomUUID());
+      const response = await createVideoTask(form, crypto.randomUUID());
       syncCredits(response);
       const taskId = response.taskId || response.data?.id || response.data?.task_id || '';
       const initialTask = {
@@ -406,7 +459,7 @@ export default function StudioPage({
     setStatusMessage(`正在调用 ${getModelLabel(imageForm.model || 'gpt-image-2.5')} 生成图片…`);
 
     try {
-      const response = await createImage(imageForm, apiKey, crypto.randomUUID());
+      const response = await createImage(imageForm, crypto.randomUUID());
       syncCredits(response);
       setImageResult(response.result);
       setStatusMessage('图片生成完成。');
@@ -464,6 +517,7 @@ export default function StudioPage({
         onClear={clearHistory}
         onCopy={copyText}
         onUseTask={manualPoll}
+        onPreview={openPreview}
       />
     </div>
   );
@@ -515,6 +569,7 @@ export default function StudioPage({
               onClear={clearHistory}
               onCopy={copyText}
               onUseTask={manualPoll}
+              onPreview={openPreview}
               compact
             />
           </section>
@@ -525,37 +580,10 @@ export default function StudioPage({
             task={task}
             currentVideoUrl={currentVideoUrl}
             onCopy={copyText}
+            onPreview={openPreview}
             generating={generating}
             form={form}
           />
-          <section className={styles.apiKeyPanel}>
-            <div className={styles.apiKeyPanelHeading}>
-              <div>
-                <div className={shared.panelKicker}>CREATION ACCESS</div>
-                <h3>生成密钥</h3>
-              </div>
-              <KeyRound size={16} />
-            </div>
-            <label className={shared.fieldLabel}>
-              <span><KeyRound size={13} /> API Key</span>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={event => onApiKeyChange(event.target.value)}
-                placeholder="使用服务端配置或输入临时密钥"
-                autoComplete="off"
-                spellCheck="false"
-              />
-            </label>
-            <p className={styles.apiKeyPanelNote}>仅用于当前浏览器会话的生成请求，不会写入账户数据库或历史记录。</p>
-          </section>
-          <div className={styles.sideNote}>
-            <div className={styles.sideNoteIcon}><ShieldCheck size={16} /></div>
-            <div>
-              <strong>服务连接状态</strong>
-              <p>Node 服务与数据库 {health?.ok ? '连接正常' : '正在检查'}，密钥不会写进视频历史记录。</p>
-            </div>
-          </div>
           {visibleHistory.length ? (
             <div className={styles.recentRail}>
               <div className={styles.recentRailHeading}>
@@ -570,10 +598,7 @@ export default function StudioPage({
                   key={item.id || item.videoUrl || item.imageUrl}
                   type="button"
                   className={styles.recentItem}
-                  onClick={() => {
-                    const url = item.videoUrl || item.imageUrl;
-                    if (url) window.open(url, '_blank', 'noopener,noreferrer');
-                  }}
+                  onClick={() => openPreview(previewMediaForHistoryItem(item))}
                 >
                   <span className={styles.recentItemStatus} />
                   <span className={styles.recentItemCopy}>
@@ -601,6 +626,7 @@ export default function StudioPage({
           error={imageError}
           form={imageForm}
           onCopy={copyText}
+          onPreview={openPreview}
         />
       </div>
     </div>
@@ -626,6 +652,7 @@ export default function StudioPage({
             user={user}
             onSave={onSaveUser}
             onChangePassword={onChangePassword}
+            onVerifyPassword={onVerifyPassword}
             onOpenAuth={onOpenAuth}
             onLogout={onLogout}
           />
@@ -634,9 +661,15 @@ export default function StudioPage({
       </main>
 
       <footer className={styles.appFooter}>
-        <div><Server size={14} /> AI金铲 · Node API · PostgreSQL</div>
+        <div>AI金铲</div>
         <span>为创作而生的 AI 工作区</span>
       </footer>
+
+      <MediaPreviewModal
+        media={previewMedia}
+        onClose={() => setPreviewMedia(null)}
+        onCopy={copyText}
+      />
     </div>
   );
 }

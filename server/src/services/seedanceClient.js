@@ -67,7 +67,7 @@ function errorSummary(response, payload = {}) {
     return {
       code: 'NoAvailableChannel',
       title: '模型暂无可用通道',
-      message: `当前账号分组没有可用的 ${payload.model || '该模型'} 通道，请切换到“海螺 H3（MiniMax-H3）”或联系上游开通该模型。`,
+      message: `当前账号分组没有可用的 ${payload.model || '该模型'} 通道，请确认模型已开通或联系上游配置模型通道。`,
       requestId: requestIdFrom(source),
     };
   }
@@ -75,7 +75,7 @@ function errorSummary(response, payload = {}) {
     return {
       code: 'InvalidToken',
       title: '鉴权失败',
-      message: 'API Key 无效或已失效，请检查服务端环境变量。',
+      message: '生成服务鉴权失败，请稍后重试或联系管理员。',
       requestId: requestIdFrom(source),
     };
   }
@@ -136,7 +136,7 @@ export function resolveApiKey(apiKey) {
 
 export async function createVideoTask(apiKey, payload) {
   const key = resolveApiKey(apiKey);
-  if (!key) throw new Error('缺少 API Key，请在页面输入或配置 OPENAI_NEXT_API_KEY。');
+  if (!key) throw new Error('生成服务暂未配置，请联系管理员。');
   const response = await requestJson(`${config.drawBaseUrl}/v1/video/generations`, {
     method: 'POST',
     headers: headers(key),
@@ -151,8 +151,8 @@ export async function createVideoTask(apiKey, payload) {
 
 export async function queryVideoTask(apiKey, taskId) {
   const key = resolveApiKey(apiKey);
-  if (!key) throw new Error('缺少 API Key，请在页面输入或配置 OPENAI_NEXT_API_KEY。');
-  const url = `${config.drawBaseUrl}/v1/tasks/${encodeURIComponent(taskId)}`;
+  if (!key) throw new Error('生成服务暂未配置，请联系管理员。');
+  const url = `${config.drawBaseUrl}/v1/video/generations/${encodeURIComponent(taskId)}`;
   const response = await requestJson(url, {
     headers: headers(key),
     timeoutMs: 30_000,

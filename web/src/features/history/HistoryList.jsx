@@ -10,6 +10,7 @@ export default function HistoryList({
   onClear,
   onCopy,
   onUseTask,
+  onPreview,
   compact = false,
 }) {
   return (
@@ -18,7 +19,7 @@ export default function HistoryList({
         <div>
           <div className={shared.panelKicker}>PERSISTED LIBRARY</div>
           <h3>历史记录</h3>
-          <p>{items.length} 条视频与图片记录保存在 PostgreSQL 中</p>
+          <p>{items.length} 条视频与图片记录</p>
         </div>
         <div className={styles.historyPanelActions}>
           <button type="button" className={styles.iconButton} onClick={onRefresh} disabled={loading} title="刷新历史记录" aria-label="刷新历史记录">
@@ -40,7 +41,13 @@ export default function HistoryList({
       ) : items.length ? (
         <div className={styles.historyList}>
           {items.map(item => (
-            <HistoryCard key={item.id || item.videoUrl} item={item} onCopy={onCopy} onUseTask={onUseTask} />
+            <HistoryCard
+              key={item.id || item.videoUrl || item.imageUrl}
+              item={item}
+              onCopy={onCopy}
+              onUseTask={onUseTask}
+              onPreview={onPreview}
+            />
           ))}
         </div>
       ) : (

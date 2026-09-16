@@ -40,6 +40,63 @@ export async function getCreditSnapshot(userId) {
   };
 }
 
+function mapLedgerRow(row) {
+  return {
+    id: String(row?.id || ''),
+    type: row?.type || '',
+    amountDelta: numberValue(row?.amount_delta),
+    balanceAfter: numberValue(row?.balance_after),
+    referenceType: row?.reference_type || '',
+    referenceId: row?.reference_id || '',
+    description: row?.description || '',
+    createdAt: row?.created_at?.toISOString?.() || row?.created_at || '',
+  };
+}
+
+function mapRechargeRow(row) {
+  return {
+    id: String(row?.id || ''),
+    planId: row?.plan_id || '',
+    credits: numberValue(row?.credits),
+    amountCents: numberValue(row?.amount_cents),
+    currency: row?.currency || 'CNY',
+    status: row?.status || '',
+    provider: row?.provider || '',
+    paidAt: row?.paid_at?.toISOString?.() || row?.paid_at || '',
+    createdAt: row?.created_at?.toISOString?.() || row?.created_at || '',
+  };
+}
+
+function normalizedLimit(value, fallback = 20) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(Math.max(Math.trunc(parsed), 1), 50);
+}
+
+export async function listCreditLedger(userId, { limit } = {}) {
+  const { rows } = await pool.query(
+    `SELECT id, type, amount_delta, balance_after, reference_type, reference_id, description, created_at
+     FROM credit_ledger
+     WHERE user_id = $1
+     ORDER BY created_at DESC, id DESC
+     LIMIT $2`,
+    [userId, normalizedLimit(limit)],
+  );
+  return rows.map(mapLedgerRow);
+}
+
+export async function listRechargeOrders(userId, { limit } = {}) {
+  const { rows } = await pool.query(
+    `SELECT id, plan_id, credits, amount_cents, currency, status, provider, paid_at, created_at
+     FROM recharge_orders
+     WHERE user_id = $1
+     ORDER BY created_at DESC, id DESC
+     LIMIT $2`,
+    [userId, normalizedLimit(limit)],
+  );
+  return rows.map(mapRechargeRow);
+}
+
 export async function debitForGeneration(client, {
   userId,
   generationId,

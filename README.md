@@ -66,7 +66,7 @@ npm start
 
 ## 配置
 
-复制 `server/.env.example` 为 `server/.env`，填写 `OPENAI_NEXT_API_KEY`。图片工作台支持 `gpt-image-2.5`、`gpt-image-2.5-sunburst` 和 `gemini-2.5-flash-image`，服务端默认使用 `gpt-image-2.5`；`DRAW_BASE_URL` 支持填写带或不带 `/v1` 的地址。`gemini-2.5-flash-image` 会优先调用 `/v1/chat/completions`，兼容你提供的 OpenAI SDK Demo。也可以在视频工作区侧栏的“生成密钥”面板临时输入 API Key。密钥只参与当前会话的生成请求，不会写入 PostgreSQL 历史记录或生成请求 JSON。
+复制 `server/.env.example` 为 `server/.env`，在服务端填写 `OPENAI_NEXT_API_KEY`。浏览器端不接触上游密钥，视频与图片请求统一由服务端完成鉴权。图片工作台支持 `gpt-image-2.5`、`gpt-image-2.5-sunburst`，服务端默认使用 `gpt-image-2.5`；`DRAW_BASE_URL` 支持填写带或不带 `/v1` 的地址。
 
 旧版 `server/seedance-history.json` 可以用 `npm run db:import` 导入 PostgreSQL。
 

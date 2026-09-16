@@ -19,8 +19,8 @@ import { httpError } from '../utils/httpError.js';
 export const videoRouter = Router();
 videoRouter.use(requireAuth);
 
-function apiKeyFrom(request) {
-  return resolveApiKey(request.body?.apiKey || request.headers['x-api-key']);
+function apiKeyFrom() {
+  return resolveApiKey();
 }
 
 function idempotencyKeyFrom(request) {
@@ -85,8 +85,10 @@ async function saveVideoRecord({ userId, generation, data, payload }) {
 videoRouter.post('/generate', async (req, res, next) => {
   try {
     const payload = normalizeVideoPayload(req.body);
-    const apiKey = apiKeyFrom(req);
-    if (!apiKey) throw httpError(400, '缺少 API Key，请在页面输入或配置 OPENAI_NEXT_API_KEY。');
+    const apiKey = apiKeyFrom();
+    if (!apiKey) throw httpError(503, '生成服务暂未配置，请联系管理员。', {
+      code: 'GENERATION_SERVICE_NOT_CONFIGURED',
+    });
     const idempotencyKey = requiredIdempotencyKey(req);
     const reserve = await reserveGeneration({
       userId: req.user.id,
@@ -229,7 +231,7 @@ videoRouter.post('/tasks/:taskId/query', async (req, res, next) => {
   try {
     const taskId = String(req.params.taskId || '').trim();
     if (!taskId) throw httpError(400, '缺少任务编号。');
-    const apiKey = apiKeyFrom(req);
+    const apiKey = apiKeyFrom();
     const synced = await syncVideoTask({
       taskId,
       userId: req.user.id,

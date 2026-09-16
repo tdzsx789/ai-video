@@ -15,6 +15,186 @@
   margin: 0 auto;
 }
 
+.pageActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modalBackdrop {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  overflow: auto;
+  place-items: center;
+  padding: 24px;
+  background: rgba(3, 5, 3, 0.78);
+  backdrop-filter: blur(6px);
+}
+
+.editModal {
+  width: min(100%, 980px);
+  max-height: min(900px, calc(100vh - 48px));
+  overflow: hidden;
+  border: 1px solid rgba(130, 229, 27, 0.28);
+  border-radius: 8px;
+  background: #111511;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+}
+
+.editModalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.editModalHeader h2 {
+  margin: 5px 0 0;
+  color: var(--text);
+  font-size: 21px;
+  line-height: 1.15;
+}
+
+.editModalHeader p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.modalCloseButton {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+}
+
+.modalCloseButton:hover {
+  border-color: rgba(130, 229, 27, 0.5);
+  color: var(--lime);
+}
+
+.editModalBody {
+  max-height: calc(100vh - 150px);
+  overflow: auto;
+  padding: 20px 24px 24px;
+}
+
+.accountOverview {
+  display: grid;
+  gap: 20px;
+}
+
+.accountOverviewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--line);
+}
+
+.accountOverviewItem {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 15px 16px;
+  background: rgba(7, 10, 7, 0.42);
+}
+
+.accountOverviewLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.accountOverviewLabel svg {
+  color: var(--lime);
+}
+
+.accountOverviewItem strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.accountSecuritySummary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 2px;
+}
+
+.accountSecuritySummary > div:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+
+.accountSecuritySummary strong {
+  display: block;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.accountSecuritySummary p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.accountSecuritySummary > .bindingStatusSet {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 1px solid rgba(130, 229, 27, 0.3);
+  border-radius: 999px;
+  color: var(--lime);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.accountSecurityActions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.securityTextButton {
+  padding: 4px 0;
+  border: 0;
+  color: var(--lime);
+  background: transparent;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.securityTextButton:hover {
+  color: var(--lime-bright);
+}
+
 .profileGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -50,6 +230,7 @@
 }
 
 .profileCard h2,
+.accountOverview h2,
 .contactCard h2,
 .securityCard h2 {
   margin: 4px 0 0;
@@ -134,6 +315,13 @@
   gap: 20px;
 }
 
+.securityChangePanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
 .securityLayout {
   display: grid;
   grid-template-columns: minmax(210px, 0.75fr) minmax(0, 1.25fr);
@@ -181,6 +369,312 @@
 .passwordForm .feedback {
   grid-column: 1 / -1;
   justify-self: start;
+}
+
+.passwordModalBackdrop {
+  z-index: 92;
+}
+
+.passwordModal {
+  width: min(100%, 560px);
+  max-height: min(860px, calc(100vh - 48px));
+  overflow: hidden;
+  border: 1px solid rgba(130, 229, 27, 0.3);
+  border-radius: 8px;
+  background: #111511;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.46);
+}
+
+.passwordDialogBody {
+  display: grid;
+  gap: 14px;
+  max-height: calc(100vh - 150px);
+  overflow: auto;
+  padding: 20px 24px 24px;
+}
+
+.passwordProgress {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(7, 10, 7, 0.42);
+}
+
+.passwordProgressItem {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.passwordProgressItem + .passwordProgressItem {
+  border-left: 1px solid var(--line);
+}
+
+.passwordProgressItem > span {
+  display: grid;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  color: inherit;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.passwordProgressActive {
+  color: var(--lime);
+  background: rgba(130, 229, 27, 0.07);
+}
+
+.passwordProgressActive > span,
+.passwordProgressComplete > span {
+  border-color: rgba(130, 229, 27, 0.48);
+  color: var(--lime);
+}
+
+.passwordProgressComplete {
+  color: var(--text-soft);
+}
+
+.passwordStageForm {
+  display: grid;
+  gap: 14px;
+}
+
+.passwordStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.passwordStepIndex {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(130, 229, 27, 0.46);
+  border-radius: 50%;
+  color: var(--lime);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.passwordStep strong {
+  display: block;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.passwordStep p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.passwordInputField {
+  gap: 7px;
+}
+
+.passwordInputWrap {
+  position: relative;
+  display: block;
+}
+
+.passwordInputWrap input {
+  padding-right: 42px !important;
+}
+
+.passwordInputWrap button {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.passwordInputWrap button:hover:not(:disabled) {
+  color: var(--lime);
+  background: rgba(130, 229, 27, 0.08);
+}
+
+.passwordInputWrap button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.passwordStrengthBlock {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(7, 10, 7, 0.42);
+}
+
+.passwordStrengthHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.passwordStrengthHeader strong {
+  font-size: 10px;
+}
+
+.passwordStrengthTrack {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.passwordStrengthTrack span {
+  display: block;
+  height: 100%;
+  min-width: 12%;
+  border-radius: inherit;
+  transition: width 0.18s ease, background 0.18s ease;
+}
+
+.passwordStrengthWeak {
+  color: #ff9c9c !important;
+}
+
+.passwordStrengthMedium {
+  color: #ffd36a !important;
+}
+
+.passwordStrengthStrong {
+  color: var(--lime) !important;
+}
+
+.passwordStrengthTrack .passwordStrengthWeak {
+  background: #ff6f6f !important;
+}
+
+.passwordStrengthTrack .passwordStrengthMedium {
+  background: #ffd36a !important;
+}
+
+.passwordStrengthTrack .passwordStrengthStrong {
+  background: var(--lime) !important;
+}
+
+.passwordCheckGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 10px;
+}
+
+.passwordCheckGrid span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.passwordCheckGrid svg {
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.22);
+}
+
+.passwordCheckPassed {
+  color: var(--text-soft) !important;
+}
+
+.passwordCheckPassed svg {
+  color: var(--lime);
+}
+
+.passwordSessionNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 11px;
+  border: 1px solid rgba(130, 229, 27, 0.24);
+  border-radius: 8px;
+  color: var(--text-soft);
+  background: rgba(130, 229, 27, 0.07);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.passwordSessionNotice svg {
+  flex: 0 0 auto;
+  color: var(--lime);
+}
+
+.passwordDialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 9px;
+  padding-top: 4px;
+}
+
+.passwordSuccessPanel {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 16px 12px 4px;
+  text-align: center;
+}
+
+.passwordSuccessIcon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border: 1px solid rgba(130, 229, 27, 0.42);
+  border-radius: 50%;
+  color: #071006;
+  background: var(--lime);
+}
+
+.passwordSuccessPanel strong {
+  display: block;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.passwordSuccessPanel p {
+  max-width: 360px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
 }
 
 .emptyAccountPanel {
@@ -232,11 +726,69 @@
     grid-template-columns: 1fr;
     gap: 19px;
   }
+
+  .securityChangePanel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 620px) {
+  .modalBackdrop {
+    align-items: start;
+    padding: 12px;
+  }
+
+  .editModalHeader {
+    padding: 18px 17px 15px;
+  }
+
+  .editModalBody {
+    max-height: calc(100vh - 112px);
+    padding: 16px 17px 20px;
+  }
+
+  .pageActions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .pageActions button {
+    flex: 1 1 auto;
+  }
+
+  .accountOverviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .accountSecuritySummary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .accountSecurityActions {
+    justify-content: flex-start;
+  }
+
   .profileGrid {
     grid-template-columns: 1fr;
+  }
+
+  .passwordDialogBody {
+    max-height: calc(100vh - 112px);
+    padding: 16px 17px 20px;
+  }
+
+  .passwordCheckGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .passwordDialogActions {
+    justify-content: stretch;
+  }
+
+  .passwordDialogActions button {
+    flex: 1 1 auto;
   }
 
   .passwordForm {

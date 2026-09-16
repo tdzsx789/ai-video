@@ -8,9 +8,9 @@ modelRouter.use(requireAuth);
 
 modelRouter.get('/', async (req, res, next) => {
   try {
-    const apiKey = resolveApiKey(req.headers['x-api-key']);
+    const apiKey = resolveApiKey();
     if (!apiKey) {
-      res.status(400).json({ ok: false, error: '缺少 API Key。' });
+      res.status(503).json({ ok: false, error: '生成服务暂未配置，请联系管理员。' });
       return;
     }
 

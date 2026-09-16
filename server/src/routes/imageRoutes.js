@@ -6,7 +6,12 @@ import {
   reserveGeneration,
   settleGeneration,
 } from '../db/generationRepository.js';
-import { createImage, normalizeImagePayload } from '../services/imageClient.js';
+import {
+  createImage,
+  imageModelUnavailableError,
+  isImageModelAvailable,
+  normalizeImagePayload,
+} from '../services/imageClient.js';
 import { resolveApiKey } from '../services/seedanceClient.js';
 import { GENERATION_COSTS } from '../services/pricing.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -15,8 +20,8 @@ import { httpError } from '../utils/httpError.js';
 export const imageRouter = Router();
 imageRouter.use(requireAuth);
 
-function apiKeyFrom(request) {
-  return resolveApiKey(request.body?.apiKey || request.headers['x-api-key']);
+function apiKeyFrom() {
+  return resolveApiKey();
 }
 
 function idempotencyKeyFrom(request) {
@@ -55,11 +60,16 @@ function replayFailure(generation) {
 
 imageRouter.post('/generate', async (req, res, next) => {
   try {
-    const apiKey = apiKeyFrom(req);
-    if (!apiKey) throw httpError(400, '缺少 API Key，请在页面输入或配置 OPENAI_NEXT_API_KEY。');
+    const apiKey = apiKeyFrom();
+    if (!apiKey) throw httpError(503, '生成服务暂未配置，请联系管理员。', {
+      code: 'GENERATION_SERVICE_NOT_CONFIGURED',
+    });
     const idempotencyKey = requiredIdempotencyKey(req);
 
     const payload = normalizeImagePayload(req.body);
+    if (!isImageModelAvailable(payload.model)) {
+      throw imageModelUnavailableError(payload.model);
+    }
     const reserve = await reserveGeneration({
       userId: req.user.id,
       kind: 'image',

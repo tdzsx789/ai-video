@@ -16,47 +16,117 @@
   max-width: min(56%, 640px);
 }
 
-.parameterGroup {
+.imageParameterGrid {
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.parameterPanel .styleOptions {
-  margin-top: 0;
+.imageParameterGrid > label:last-child {
+  grid-column: 1 / -1;
 }
 
-.parameterPanel .styleOption {
-  flex: 1 1 calc(50% - 7px);
+.advancedSection {
+  display: grid;
+  gap: 13px;
+  padding-top: 2px;
+  border-top: 1px solid var(--line);
 }
 
-.styleOptions {
+.advancedToggle {
   display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 8px;
-}
-
-.styleOption {
-  min-height: 33px;
-  padding: 0 11px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  color: var(--text-soft);
-  background: rgba(255, 255, 255, 0.05);
-  font-size: 11px;
-  font-weight: 700;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 0 0;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  text-align: left;
   cursor: pointer;
 }
 
-.styleOption:hover,
-.styleOption.isSelected {
-  border-color: rgba(130, 229, 27, 0.62);
+.advancedToggle:hover {
   color: var(--lime);
-  background: rgba(130, 229, 27, 0.09);
 }
 
-.imageRatioField {
+.advancedToggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.advancedToggle > svg {
+  flex: 0 0 auto;
+  color: var(--lime);
+  transition: transform 0.18s ease;
+}
+
+.advancedToggle > svg.isExpanded {
+  transform: rotate(180deg);
+}
+
+.advancedToggleLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.advancedToggleLabel > svg {
+  color: var(--lime);
+}
+
+.advancedToggleLabel > span {
+  display: grid;
+  gap: 3px;
+}
+
+.advancedToggleLabel strong {
+  font-size: 12px;
+}
+
+.advancedToggleLabel small,
+.compressionField small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.advancedContent {
+  display: grid;
+  gap: 13px;
+  padding-bottom: 1px;
+}
+
+.compressionField {
+  gap: 9px;
+}
+
+.compressionLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.compressionLabel output {
+  color: var(--lime);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.compressionField input[type='range'] {
   width: 100%;
+  height: 4px;
+  accent-color: var(--lime);
+  cursor: pointer;
+}
+
+.compressionField input[type='range']:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .imageFormFooter {
@@ -137,6 +207,14 @@
   .promptHeaderMeta {
     justify-content: flex-start;
     max-width: 100%;
+  }
+
+  .imageParameterGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .imageParameterGrid > label:last-child {
+    grid-column: auto;
   }
 
   .imageFormFooter {

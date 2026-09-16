@@ -1,6 +1,7 @@
 import { Coins, Image, Info, ShieldCheck, Sparkles, Video } from 'lucide-react';
 import { useState } from 'react';
 import { getModelLabel } from '../lib/modelLabels.js';
+import { isImageProviderEnabled } from '../lib/imageProviders.js';
 import { isVideoProviderEnabled } from '../lib/videoProviders.js';
 import shared from '../styles/shared.module.css';
 import styles from './PricingInfoPage.module.css';
@@ -62,14 +63,34 @@ const ALL_VIDEO_PRICING = [
     note: '第三方视频模型 mock 计费，后续按实际供应商调整。',
   },
   {
-    type: '视频生成',
+    type: '参考图生视频',
     provider: 'hailuo',
-    model: 'MiniMax-H3',
-    version: getModelLabel('MiniMax-H3'),
+    model: 'MiniMax-Hailuo-2.3-Fast/768p/6s',
+    version: getModelLabel('MiniMax-Hailuo-2.3-Fast/768p/6s'),
     unit: '每次生成',
     credits: 58,
-    specs: '768P / 2K · 4-15 秒',
-    note: '当前账号已开放的海螺视频模型，适合自然语言视频创作。',
+    specs: '768P / 6 秒',
+    note: '需提供首帧图片，时长和分辨率由版本固定。',
+  },
+  {
+    type: '参考图生视频',
+    provider: 'hailuo',
+    model: 'MiniMax-Hailuo-2.3-Fast/768p/10s',
+    version: getModelLabel('MiniMax-Hailuo-2.3-Fast/768p/10s'),
+    unit: '每次生成',
+    credits: 58,
+    specs: '768P / 10 秒',
+    note: '需提供首帧图片，时长和分辨率由版本固定。',
+  },
+  {
+    type: '参考图生视频',
+    provider: 'hailuo',
+    model: 'MiniMax-Hailuo-2.3-Fast/1080p/6s',
+    version: getModelLabel('MiniMax-Hailuo-2.3-Fast/1080p/6s'),
+    unit: '每次生成',
+    credits: 58,
+    specs: '1080P / 6 秒',
+    note: '需提供首帧图片，时长和分辨率由版本固定。',
   },
 ];
 
@@ -77,7 +98,7 @@ const VIDEO_PRICING = ALL_VIDEO_PRICING.filter(item => (
   isVideoProviderEnabled(item.provider || 'seedance')
 ));
 
-const IMAGE_PRICING = [
+const ALL_IMAGE_PRICING = [
   {
     type: '文生图片',
     model: 'gpt-image-2.5',
@@ -98,21 +119,13 @@ const IMAGE_PRICING = [
   },
   {
     type: '文生图片',
+    provider: 'gemini-nano-banana',
     model: 'gemini-2.5-flash-image',
     version: getModelLabel('gemini-2.5-flash-image'),
     unit: '每张图片',
     credits: 12,
     specs: '标准质量 / 1 张',
     note: '适合快速生成概念图、角色设定和视觉草稿。',
-  },
-  {
-    type: '风格化图片',
-    model: 'gpt-image-2.5',
-    version: '电影感 / 杂志视觉 / 插画风 / 产品棚拍',
-    unit: '每张图片',
-    credits: 14,
-    specs: '风格参数启用',
-    note: '选择明确风格后按增强任务计费。',
   },
   {
     type: '图片重试',
@@ -124,6 +137,10 @@ const IMAGE_PRICING = [
     note: '同一任务短时间内重试可使用优惠消耗。',
   },
 ];
+
+const IMAGE_PRICING = ALL_IMAGE_PRICING.filter(item => (
+  isImageProviderEnabled(item.provider || 'gpt-image')
+));
 
 const PRICING_VIEWS = {
   video: {

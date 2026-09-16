@@ -45,9 +45,11 @@ const ALL_AI_TOOLS = [
   },
   {
     id: 'hailuo',
-    label: '海螺',
+    label: '海螺2.3',
     models: [
-      { key: 'MiniMax-H3', label: '海螺 H3（当前可用）' },
+      'MiniMax-Hailuo-2.3-Fast/768p/6s',
+      'MiniMax-Hailuo-2.3-Fast/768p/10s',
+      'MiniMax-Hailuo-2.3-Fast/1080p/6s',
     ],
   },
 ];
@@ -119,7 +121,8 @@ export default function GeneratorForm({
   const showReferenceImages = isSeedance
     && capabilities.supportsReferenceImages
     && modeAllowsReferences;
-  const showFirstLastFrames = isSeedance && modeAllowsFrames;
+  const showFirstFrame = isHailuo || (isSeedance && modeAllowsFrames);
+  const showLastFrame = isSeedance && modeAllowsFrames;
   const hasImageReference = Boolean(
     form.firstFrameUrl?.trim()
     || form.lastFrameUrl?.trim()
@@ -142,23 +145,26 @@ export default function GeneratorForm({
   );
   const referenceStatus = hasReferenceInput
     ? modeRequiresVideo && !form.referenceVideoUrl?.trim() ? '需视频' : '已添加'
-    : modeRequiresVideo || mode === 'reference' ? '需要添加' : '可选';
+    : isHailuo || modeRequiresVideo || mode === 'reference' ? '需要添加' : '可选';
   const durationOptions = isSeedance || isHailuo
     ? getDurationOptions(capabilities)
     : LEGACY_DURATION_OPTIONS;
   const ratioOptions = isSeedance || isHailuo
     ? getRatioOptions(capabilities)
     : LEGACY_RATIO_OPTIONS;
-  const advancedOptionCount = isSeedance
-    ? [
+  const advancedOptionCount = [
+    ...(isSeedance
+      ? [
       capabilities.supportsOutputFormat,
       capabilities.supportsSeed,
       capabilities.supportsFrames,
       capabilities.supportsCameraFixed,
       capabilities.supportsDraft,
       capabilities.supportsReturnLastFrame,
-    ].filter(Boolean).length
-    : 0;
+      ]
+      : []),
+    ...(isHailuo && capabilities.supportsFastPretreatment ? [true] : []),
+  ].filter(Boolean).length;
 
   const chooseTool = tool => {
     onChange(normalizeModelForm(form, modelKey(tool.models[0])));
@@ -286,11 +292,11 @@ export default function GeneratorForm({
 
             <div className={styles.parameterGrid}>
               <label className={shared.fieldLabel}>
-                <span>时长</span>
+                <span>{isHailuo ? '时长（版本固定）' : '时长'}</span>
                 <select
                   value={form.duration ?? 5}
                   onChange={event => onChange({ duration: Number(event.target.value) })}
-                  disabled={disabled || Boolean(form.frames) || isEditing}
+                  disabled={disabled || Boolean(form.frames) || isEditing || isHailuo}
                 >
                   {durationOptions.map(value => (
                     <option key={value} value={value}>
@@ -300,30 +306,36 @@ export default function GeneratorForm({
                 </select>
               </label>
               <label className={shared.fieldLabel}>
-                <span>分辨率</span>
+                <span>{isHailuo ? '分辨率（版本固定）' : '分辨率'}</span>
                 <select
                   value={form.resolution || '720P'}
                   onChange={event => onChange({ resolution: event.target.value })}
-                  disabled={disabled || Boolean(form.draft)}
+                  disabled={disabled || Boolean(form.draft) || isHailuo}
                 >
                   {(isSeedance || isHailuo ? capabilities.resolutions : ['480P', '720P', '1080P']).map(value => (
                     <option key={value} value={value}>{value === '2K' ? '2K' : value.toLowerCase()}</option>
                   ))}
                 </select>
               </label>
-              <label className={shared.fieldLabel}>
-                <span>画幅比例</span>
-                <select
-                  value={form.ratio || '16:9'}
-                  onChange={event => onChange({ ratio: event.target.value })}
-                  disabled={disabled || isEditing || isExtending}
-                >
-                  {ratioOptions.map(value => (
-                    <option key={value} value={value}>{value === 'adaptive' ? '跟随素材' : value}</option>
-                  ))}
-                </select>
-              </label>
+              {ratioOptions.length ? (
+                <label className={shared.fieldLabel}>
+                  <span>画幅比例</span>
+                  <select
+                    value={form.ratio || '16:9'}
+                    onChange={event => onChange({ ratio: event.target.value })}
+                    disabled={disabled || isEditing || isExtending}
+                  >
+                    {ratioOptions.map(value => (
+                      <option key={value} value={value}>{value === 'adaptive' ? '跟随素材' : value}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
             </div>
+
+            {isHailuo ? (
+              <p className={styles.parameterHint}>海螺 2.3 Fast 的时长和分辨率由第 2 步版本决定。</p>
+            ) : null}
 
             <div className={styles.toggleGrid}>
               {isSeedance && capabilities.supportsAudio ? (
@@ -335,16 +347,26 @@ export default function GeneratorForm({
                   disabled={disabled}
                 />
               ) : null}
-              <ToggleRow
-                label="提示词增强"
-                description="补充镜头、光照和运动细节"
-                checked={form.promptExtend ?? true}
-                onChange={checked => onChange({ promptExtend: checked })}
-                disabled={disabled}
-              />
+              {isHailuo ? (
+                <ToggleRow
+                  label="提示词优化"
+                  description="自动优化镜头语言和运镜表达"
+                  checked={form.promptOptimizer ?? true}
+                  onChange={checked => onChange({ promptOptimizer: checked })}
+                  disabled={disabled}
+                />
+              ) : (
+                <ToggleRow
+                  label="提示词增强"
+                  description="补充镜头、光照和运动细节"
+                  checked={form.promptExtend ?? true}
+                  onChange={checked => onChange({ promptExtend: checked })}
+                  disabled={disabled}
+                />
+              )}
             </div>
 
-            {isSeedance ? (
+            {isSeedance || isHailuo ? (
               <div className={styles.referenceSection}>
                 <button
                   type="button"
@@ -367,35 +389,41 @@ export default function GeneratorForm({
                 {referenceOpen ? (
                   <div className={styles.referenceContent} id="video-creative-material-options">
                     <p className={styles.parameterHint}>
-                      {modeRequiresVideo
+                      {isHailuo
+                        ? '海螺 2.3 Fast 官方接口为参考图生视频，需要添加一张首帧图片。'
+                        : modeRequiresVideo
                         ? '当前模式需要添加视频素材。'
                         : isSeedance && capabilities.family === '2.0'
                           ? '2.0 版本的参考音频需要搭配图片或视频素材。'
                         : '首尾画面与创作素材请二选一；多个地址请每行填写一个。'}
                     </p>
 
-                    {showFirstLastFrames ? (
+                    {showFirstFrame || showLastFrame ? (
                       <div className={styles.referenceGrid}>
-                        <label className={shared.fieldLabel}>
-                          <span>首帧图片</span>
-                          <input
-                            type="url"
-                            value={form.firstFrameUrl || ''}
-                            onChange={event => onChange({ firstFrameUrl: event.target.value })}
-                            placeholder="https://…"
-                            disabled={disabled}
-                          />
-                        </label>
-                        <label className={shared.fieldLabel}>
-                          <span>尾帧图片</span>
-                          <input
-                            type="url"
-                            value={form.lastFrameUrl || ''}
-                            onChange={event => onChange({ lastFrameUrl: event.target.value })}
-                            placeholder="https://…"
-                            disabled={disabled}
-                          />
-                        </label>
+                        {showFirstFrame ? (
+                          <label className={shared.fieldLabel}>
+                            <span>首帧图片</span>
+                            <input
+                              type="url"
+                              value={form.firstFrameUrl || ''}
+                              onChange={event => onChange({ firstFrameUrl: event.target.value })}
+                              placeholder="https://…"
+                              disabled={disabled}
+                            />
+                          </label>
+                        ) : null}
+                        {showLastFrame ? (
+                          <label className={shared.fieldLabel}>
+                            <span>尾帧图片</span>
+                            <input
+                              type="url"
+                              value={form.lastFrameUrl || ''}
+                              onChange={event => onChange({ lastFrameUrl: event.target.value })}
+                              placeholder="https://…"
+                              disabled={disabled}
+                            />
+                          </label>
+                        ) : null}
                       </div>
                     ) : null}
 
@@ -445,7 +473,7 @@ export default function GeneratorForm({
               </div>
             ) : null}
 
-            {isSeedance && advancedOptionCount ? (
+            {(isSeedance || isHailuo) && advancedOptionCount ? (
               <div className={styles.advancedSection}>
                 <button
                   type="button"
@@ -464,6 +492,15 @@ export default function GeneratorForm({
                 {advancedOpen ? (
                   <div className={styles.advancedContent}>
                     <div className={styles.toggleGrid}>
+                      {isHailuo && capabilities.supportsFastPretreatment ? (
+                        <ToggleRow
+                          label="快速预处理"
+                          description="缩短提示词优化的预处理时间"
+                          checked={Boolean(form.fastPretreatment)}
+                          onChange={checked => onChange({ fastPretreatment: checked })}
+                          disabled={disabled}
+                        />
+                      ) : null}
                       <ToggleRow
                         label="添加水印"
                         description="在成片右下角保留 AI Generated 水印"

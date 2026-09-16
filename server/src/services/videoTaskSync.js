@@ -300,10 +300,14 @@ export async function syncVideoTask({
     await releaseVideoTaskSync({
       taskId: ownedTask.task_id,
       claimId: ownedTask.sync_claim_id,
-      error: httpError(400, '缺少 API Key，请在页面输入或配置 OPENAI_NEXT_API_KEY。'),
+      error: httpError(503, '生成服务暂未配置，请联系管理员。', {
+        code: 'GENERATION_SERVICE_NOT_CONFIGURED',
+      }),
       retryDelayMs: config.videoSyncIntervalMs,
     });
-    throw httpError(400, '缺少 API Key，请在页面输入或配置 OPENAI_NEXT_API_KEY。');
+    throw httpError(503, '生成服务暂未配置，请联系管理员。', {
+      code: 'GENERATION_SERVICE_NOT_CONFIGURED',
+    });
   }
 
   let response;

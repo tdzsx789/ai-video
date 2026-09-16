@@ -1,7 +1,9 @@
-import { Check, ChevronDown, Coins, Image, Sparkles, WandSparkles } from 'lucide-react';
+import { useState } from 'react';
+import { Check, ChevronDown, Coins, Image, Settings2, Sparkles, WandSparkles } from 'lucide-react';
 import SectionHeading from '../../components/SectionHeading.jsx';
 import StepBadge from '../../components/StepBadge.jsx';
 import { getModelLabel } from '../../lib/modelLabels.js';
+import { isImageProviderEnabled } from '../../lib/imageProviders.js';
 import shared from '../../styles/shared.module.css';
 import generatorStyles from './GeneratorForm.module.css';
 import styles from './ImageGeneratorForm.module.css';
@@ -19,18 +21,38 @@ export const IMAGE_TOOLS = [
     id: 'gemini-nano-banana',
     label: 'Gemini-nano-banana',
     models: [
-      { key: 'gemini-2.5-flash-image', label: '2.5' },
+      { key: 'gemini-2.5-flash-image', label: '2.5（暂不可用）', disabled: true },
     ],
   },
 ];
 
-const STYLE_OPTIONS = [
-  { id: 'cinematic', label: '电影感' },
-  { id: 'editorial', label: '杂志视觉' },
-  { id: 'illustration', label: '插画风' },
-  { id: 'product', label: '产品棚拍' },
-];
 const IMAGE_GENERATION_COST = 12;
+
+const IMAGE_SIZE_OPTIONS = [
+  { value: 'auto', label: '自动' },
+  { value: '1024x1024', label: '1024 × 1024 · 方形' },
+  { value: '1536x1024', label: '1536 × 1024 · 横向' },
+  { value: '1024x1536', label: '1024 × 1536 · 纵向' },
+];
+
+const IMAGE_QUALITY_OPTIONS = [
+  { value: 'auto', label: '自动' },
+  { value: 'low', label: '低 · 更快' },
+  { value: 'medium', label: '中 · 平衡' },
+  { value: 'high', label: '高 · 更细节' },
+];
+
+const IMAGE_BACKGROUND_OPTIONS = [
+  { value: 'auto', label: '自动' },
+  { value: 'opaque', label: '不透明' },
+  { value: 'transparent', label: '透明' },
+];
+
+const IMAGE_FORMAT_OPTIONS = [
+  { value: 'png', label: 'PNG · 无损' },
+  { value: 'jpeg', label: 'JPEG · 体积更小' },
+  { value: 'webp', label: 'WebP · 体积更小' },
+];
 
 function modelKey(model) {
   return typeof model === 'string' ? model : model.key;
@@ -54,8 +76,17 @@ export default function ImageGeneratorForm({
   onGenerate,
   generating,
 }) {
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const selectedTool = getToolForModel(form.model);
   const selectedModel = getSelectedModel(selectedTool, form.model);
+  const selectedModelUnavailable = selectedModel.disabled;
+  const imageSize = form.size || 'auto';
+  const imageQuality = form.quality || 'auto';
+  const imageBackground = form.background || 'auto';
+  const outputFormat = form.outputFormat || 'png';
+  const outputCompression = Number.isFinite(Number(form.outputCompression))
+    ? Number(form.outputCompression)
+    : 100;
 
   const chooseTool = tool => {
     onChange({ model: modelKey(tool.models[0]) });
@@ -80,7 +111,8 @@ export default function ImageGeneratorForm({
                 key={tool.id}
                 className={`${generatorStyles.toolOption} ${selectedTool.id === tool.id ? generatorStyles.isSelected : ''}`}
                 onClick={() => chooseTool(tool)}
-                disabled={generating}
+                disabled={generating || !isImageProviderEnabled(tool.id) || tool.models.every(model => model.disabled)}
+                title={!isImageProviderEnabled(tool.id) ? '当前账号暂时没有可用通道' : undefined}
               >
                 <Image size={15} />
                 <span>{tool.label}</span>
@@ -104,7 +136,7 @@ export default function ImageGeneratorForm({
           <label className={generatorStyles.modelSelectField}>
             <select value={modelKey(selectedModel)} onChange={event => onChange({ model: event.target.value })} disabled={generating}>
               {selectedTool.models.map(model => (
-                <option key={modelKey(model)} value={modelKey(model)}>{modelLabel(model)}</option>
+                <option key={modelKey(model)} value={modelKey(model)} disabled={model.disabled}>{modelLabel(model)}</option>
               ))}
             </select>
             <ChevronDown size={15} aria-hidden="true" />
@@ -118,7 +150,7 @@ export default function ImageGeneratorForm({
             step="03"
             eyebrow="PROMPT & PARAMETERS"
             title="描述你的画面"
-            description="用具体的主体、环境、光线和风格描述你想生成的画面。"
+            description="用具体的主体、环境、光线、材质和构图描述你想生成的画面。"
             compact
           />
           <div className={styles.promptHeaderMeta}>
@@ -134,7 +166,7 @@ export default function ImageGeneratorForm({
             <textarea
               value={form.prompt}
               onChange={event => onChange({ prompt: event.target.value })}
-              placeholder="请输入画面描述，包含主体、场景、光线和视觉风格"
+              placeholder="请输入画面描述，包含主体、场景、光线、材质和构图"
               disabled={generating}
               spellCheck="false"
             />
@@ -143,43 +175,98 @@ export default function ImageGeneratorForm({
 
           <div className={generatorStyles.parameterPanel}>
             <div className={generatorStyles.parameterPanelHeading}>
-              <span>精细参数</span>
-              <ChevronDown size={15} />
-            </div>
-
-            <div className={styles.parameterGroup}>
-              <span className={shared.fieldCaption}>视觉风格</span>
-              <div className={styles.styleOptions}>
-                {STYLE_OPTIONS.map(option => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    className={`${styles.styleOption} ${form.style === option.id ? styles.isSelected : ''}`}
-                    onClick={() => onChange({ style: option.id })}
-                    disabled={generating}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+              <div>
+                <span>精细参数</span>
+                <small>常用选项会直接作用于本次生成</small>
               </div>
+              <span className={generatorStyles.parameterStatus}>GPT Image</span>
             </div>
 
-            <label className={`${shared.fieldLabel} ${styles.imageRatioField}`}>
-              <span>画幅</span>
-              <select value={form.ratio} onChange={event => onChange({ ratio: event.target.value })} disabled={generating}>
-                <option value="1:1">1:1 方形</option>
-                <option value="4:3">4:3 横幅</option>
-                <option value="16:9">16:9 宽屏</option>
-                <option value="9:16">9:16 竖幅</option>
-              </select>
-            </label>
+            <div className={styles.imageParameterGrid}>
+              <label className={shared.fieldLabel}>
+                <span>尺寸</span>
+                <select value={imageSize} onChange={event => onChange({ size: event.target.value })} disabled={generating}>
+                  {IMAGE_SIZE_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className={shared.fieldLabel}>
+                <span>质量</span>
+                <select value={imageQuality} onChange={event => onChange({ quality: event.target.value })} disabled={generating}>
+                  {IMAGE_QUALITY_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className={shared.fieldLabel}>
+                <span>背景</span>
+                <select value={imageBackground} onChange={event => onChange({ background: event.target.value })} disabled={generating}>
+                  {IMAGE_BACKGROUND_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value} disabled={outputFormat === 'jpeg' && option.value === 'transparent'}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className={styles.advancedSection}>
+              <button
+                type="button"
+                className={styles.advancedToggle}
+                onClick={() => setAdvancedOpen(current => !current)}
+                disabled={generating}
+                aria-expanded={advancedOpen}
+                aria-controls="image-advanced-options"
+              >
+                <span className={styles.advancedToggleLabel}>
+                  <Settings2 size={15} />
+                  <span>
+                    <strong>高级配置</strong>
+                    <small>输出格式与压缩质量</small>
+                  </span>
+                </span>
+                <ChevronDown className={advancedOpen ? styles.isExpanded : ''} size={16} />
+              </button>
+
+              {advancedOpen ? (
+                <div className={styles.advancedContent} id="image-advanced-options">
+                  <label className={shared.fieldLabel}>
+                    <span>输出格式</span>
+                    <select value={outputFormat} onChange={event => onChange({ outputFormat: event.target.value })} disabled={generating}>
+                      {IMAGE_FORMAT_OPTIONS.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className={`${shared.fieldLabel} ${styles.compressionField}`}>
+                    <span className={styles.compressionLabel}>
+                      <span>压缩质量</span>
+                      <output>{outputFormat === 'png' ? 'PNG 不适用' : `${outputCompression}%`}</output>
+                    </span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={outputCompression}
+                      onChange={event => onChange({ outputCompression: Number(event.target.value) })}
+                      disabled={generating || outputFormat === 'png'}
+                    />
+                    <small>仅 JPEG / WebP 生效</small>
+                  </label>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 
         <div className={styles.imageFormFooter}>
           <div className={styles.imageFormNote}>
             <WandSparkles size={15} />
-            <span>支持中文描述 · 高清草稿</span>
+            <span>支持中文描述 · 一次生成 1 张</span>
           </div>
           <div className={styles.imageSubmitArea}>
             <span className={styles.imageCostBadge}>
@@ -190,7 +277,7 @@ export default function ImageGeneratorForm({
               type="button"
               className={`${shared.submitButton} ${styles.imageSubmitButton}`}
               onClick={onGenerate}
-              disabled={generating || !form.prompt.trim()}
+              disabled={generating || selectedModelUnavailable || !form.prompt.trim()}
             >
               {generating ? <span className={styles.buttonLoader} /> : <Sparkles size={17} />}
               {generating ? '正在生成…' : '生成图片'}

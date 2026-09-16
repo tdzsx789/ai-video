@@ -9,6 +9,7 @@ import {
   recharge,
   updatePassword,
   updateProfile,
+  verifyCurrentPassword,
 } from './lib/api.js';
 import styles from './App.module.css';
 
@@ -22,7 +23,6 @@ export default function App() {
   const [activeSection, setActiveSection] = useState('video');
   const [user, setUser] = useState(null);
   const [credits, setCredits] = useState(0);
-  const [apiKey, setApiKey] = useState(() => import.meta.env.VITE_DEFAULT_API_KEY || '');
   const [authReady, setAuthReady] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
@@ -81,6 +81,11 @@ export default function App() {
     return response;
   };
 
+  const verifyPassword = async currentPassword => {
+    const response = await verifyCurrentPassword(currentPassword);
+    return response;
+  };
+
   const logout = async () => {
     try {
       await logoutRequest();
@@ -99,8 +104,10 @@ export default function App() {
       setCredits(Number(response.balance || 0));
       const paymentLabel = PAYMENT_METHOD_LABELS[paymentMethod] || PAYMENT_METHOD_LABELS.wechat;
       showToast(`已模拟通过${paymentLabel}充值 ${plan.credits.toLocaleString('zh-CN')} 积分。`);
+      return response;
     } catch (error) {
       showToast(error.message || '充值失败。');
+      throw error;
     }
   };
 
@@ -124,12 +131,9 @@ export default function App() {
           onOpenAuth={openAuth}
           onLogout={logout}
           onRecharge={handleRecharge}
-          apiKey={apiKey}
-          onApiKeyChange={value => {
-            setApiKey(value);
-          }}
           onSaveUser={updateUser}
           onChangePassword={changePassword}
+          onVerifyPassword={verifyPassword}
           onCreditsChange={setCredits}
         />
       ) : (

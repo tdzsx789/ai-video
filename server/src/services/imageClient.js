@@ -3,26 +3,29 @@ import { safeExternalText } from '../db/safeJson.js';
 import { resolveApiKey } from './seedanceClient.js';
 import { readResponseText } from './http.js';
 
-const stylePrompts = {
-  cinematic: '电影感光影，真实镜头语言，细腻景深，高级调色。',
-  editorial: '杂志大片构图，精致排版感，干净背景，强视觉主次。',
-  illustration: '高完成度插画风格，清晰线条，丰富细节，色彩协调。',
-  product: '产品棚拍质感，黑色或深色商业摄影背景，精致轮廓光，材质细节清晰。',
-};
+const imageSizes = new Set(['auto', '1024x1024', '1536x1024', '1024x1536']);
+const imageQualities = new Set(['auto', 'low', 'medium', 'high']);
+const imageBackgrounds = new Set(['auto', 'opaque', 'transparent']);
+const imageFormats = new Set(['png', 'jpeg', 'webp']);
 
-const ratioPrompts = {
-  '1:1': '方形构图。',
-  '4:3': '横向 4:3 构图。',
-  '16:9': '宽屏 16:9 构图。',
-  '9:16': '竖屏 9:16 构图。',
-};
-
-const ratioSizes = {
+const legacyRatioSizes = {
   '1:1': '1024x1024',
   '4:3': '1536x1024',
   '16:9': '1536x1024',
   '9:16': '1024x1536',
 };
+
+function ratioForSize(size) {
+  return {
+    auto: 'auto',
+    '1024x1024': '1:1',
+    '1536x1024': '3:2',
+    '1024x1536': '2:3',
+  }[size] || 'auto';
+}
+
+// The current upstream account exposes this model in /v1/models but has no usable image channel for it.
+const unavailableImageModels = new Set(['gemini-2.5-flash-image']);
 
 function requestHeaders(apiKey) {
   return {
@@ -138,12 +141,13 @@ function upstreamErrorMessage(data, raw) {
 function errorSummary(response, payload = {}) {
   const source = `${JSON.stringify(response?.data || {})}\n${response?.raw || ''}`;
   const message = upstreamErrorMessage(response?.data, response?.raw);
+  const status = Number(response?.status || 0);
 
   if (/Invalid token|Unauthorized|401|api key/i.test(source)) {
     return {
       code: 'InvalidToken',
       title: '鉴权失败',
-      message: 'API Key 无效或已失效，请检查服务端 OPENAI_NEXT_API_KEY 或创作工作区中的生成密钥。',
+      message: '生成服务鉴权失败，请稍后重试或联系管理员。',
     };
   }
 
@@ -155,10 +159,18 @@ function errorSummary(response, payload = {}) {
     };
   }
 
+  if (status === 402 || /"code"\s*:\s*402\b|payment required|no available channels|insufficient balance/i.test(source)) {
+    return {
+      code: 'ImageChannelUnavailable',
+      title: '图片模型暂不可用',
+      message: `当前账号或分组暂时没有 ${payload.model || config.imageModel} 的可用图片通道。请切换到 gpt-image 2.5 重试；本次失败任务的积分已自动退回。`,
+    };
+  }
+
   return {
-    code: `HTTP_${response?.status || 500}`,
+    code: `HTTP_${status || 500}`,
     title: '图片生成失败',
-    message: message || `图片接口返回 HTTP ${response?.status || 500}。`,
+    message: message || `图片接口返回 HTTP ${status || 500}。`,
   };
 }
 
@@ -180,15 +192,24 @@ function isChatFirstImageModel(model) {
 }
 
 function imageGenerationRequest(apiKey, payload, prompt) {
+  const body = {
+    model: payload.model,
+    prompt,
+    n: 1,
+    size: payload.size,
+    quality: payload.quality,
+    background: payload.background,
+    output_format: payload.outputFormat,
+  };
+
+  if (payload.outputFormat !== 'png') {
+    body.output_compression = payload.outputCompression;
+  }
+
   return requestJson(`${config.drawBaseUrl}/v1/images/generations`, {
     method: 'POST',
     headers: requestHeaders(apiKey),
-    body: JSON.stringify({
-      model: payload.model,
-      prompt,
-      n: 1,
-      size: payload.size,
-    }),
+    body: JSON.stringify(body),
     timeoutMs: 120_000,
   });
 }
@@ -217,31 +238,60 @@ export function normalizeImagePayload(input = {}) {
     throw error;
   }
 
-  const style = stylePrompts[input.style] ? input.style : 'product';
-  const ratio = ratioSizes[input.ratio] ? input.ratio : '1:1';
   const model = String(input.model || config.imageModel || 'gpt-image-2.5').trim();
+  const rawSize = String(input.size || '').trim();
+  const size = imageSizes.has(rawSize)
+    ? rawSize
+    : legacyRatioSizes[input.ratio] || 'auto';
+  const outputFormat = imageFormats.has(String(input.outputFormat || input.output_format || '').trim().toLowerCase())
+    ? String(input.outputFormat || input.output_format).trim().toLowerCase()
+    : 'png';
+  const quality = imageQualities.has(String(input.quality || '').trim())
+    ? String(input.quality).trim()
+    : 'auto';
+  const requestedBackground = String(input.background || '').trim();
+  const background = imageBackgrounds.has(requestedBackground)
+    ? (requestedBackground === 'transparent' && outputFormat === 'jpeg' ? 'opaque' : requestedBackground)
+    : 'auto';
+  const rawCompression = Number(input.outputCompression ?? input.output_compression);
+  const outputCompression = Number.isFinite(rawCompression)
+    ? Math.min(100, Math.max(0, Math.round(rawCompression)))
+    : 100;
 
   return {
     model,
     prompt,
-    style,
-    ratio,
-    size: ratioSizes[ratio],
+    size,
+    ratio: ratioForSize(size),
+    quality,
+    background,
+    outputFormat,
+    outputCompression,
   };
 }
 
+export function isImageModelAvailable(model) {
+  return !unavailableImageModels.has(String(model || '').trim());
+}
+
+export function imageModelUnavailableError(model) {
+  const name = String(model || config.imageModel).trim();
+  const error = new Error(
+    `当前账号或分组暂时没有 ${name} 的可用图片通道，请切换到 gpt-image 2.5 重试。`,
+  );
+  error.status = 503;
+  error.code = 'IMAGE_CHANNEL_UNAVAILABLE';
+  error.expose = true;
+  return error;
+}
+
 export function buildImagePrompt(payload) {
-  return [
-    payload.prompt,
-    stylePrompts[payload.style],
-    ratioPrompts[payload.ratio],
-    '画面主体明确，避免文字、水印、低清晰度和畸形结构。',
-  ].filter(Boolean).join('\n');
+  return payload.prompt;
 }
 
 export async function createImage(apiKey, payload) {
   const key = resolveApiKey(apiKey);
-  if (!key) throw new Error('缺少 API Key，请在页面输入或配置 OPENAI_NEXT_API_KEY。');
+  if (!key) throw new Error('生成服务暂未配置，请联系管理员。');
 
   const prompt = buildImagePrompt(payload);
   let response;
@@ -290,6 +340,10 @@ export async function createImage(apiKey, payload) {
       model: payload.model,
       size: payload.size,
       ratio: payload.ratio,
+      quality: payload.quality,
+      background: payload.background,
+      outputFormat: payload.outputFormat,
+      outputCompression: payload.outputCompression,
       prompt: payload.prompt,
       revisedPrompt,
       createdAt: new Date().toISOString(),

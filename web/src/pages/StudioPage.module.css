@@ -117,79 +117,6 @@
   color: var(--lime-bright);
 }
 
-.sideNote {
-  display: flex;
-  gap: 11px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(17, 21, 17, 0.82);
-}
-
-.sideNoteIcon {
-  display: grid;
-  flex: 0 0 auto;
-  width: 29px;
-  height: 29px;
-  place-items: center;
-  border-radius: 7px;
-  color: var(--lime);
-  background: rgba(130, 229, 27, 0.1);
-}
-
-.sideNote strong {
-  font-size: 12px;
-}
-
-.sideNote p {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-.apiKeyPanel {
-  display: grid;
-  gap: 13px;
-  padding: 17px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(17, 21, 17, 0.82);
-}
-
-.apiKeyPanelHeading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--line);
-}
-
-.apiKeyPanelHeading h3 {
-  margin: 4px 0 0;
-  color: var(--text);
-  font-size: 18px;
-  line-height: 1.12;
-  letter-spacing: 0;
-}
-
-.apiKeyPanelHeading > svg {
-  color: var(--lime);
-}
-
-.apiKeyPanel .fieldLabel input {
-  font-family: var(--mono);
-  font-size: 10px;
-}
-
-.apiKeyPanelNote {
-  margin: -3px 0 0;
-  color: var(--muted);
-  font-size: 10px;
-  line-height: 1.6;
-}
-
 .recentRail {
   padding: 17px;
   border: 1px solid var(--line);
@@ -403,6 +330,52 @@
   height: 100%;
   min-height: 270px;
   object-fit: contain;
+}
+
+.imageResultPreviewButton {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 100%;
+  min-height: 270px;
+  place-items: center;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+.imageResultPreviewButton img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 270px;
+  object-fit: contain;
+}
+
+.imageResultPreviewHint {
+  position: absolute;
+  right: 11px;
+  bottom: 11px;
+  min-height: 28px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.62);
+  font-size: 10px;
+  font-weight: 800;
+  opacity: 0;
+  transition: opacity 140ms ease, color 140ms ease, background 140ms ease;
+}
+
+.imageResultPreviewButton:hover .imageResultPreviewHint,
+.imageResultPreviewButton:focus-visible .imageResultPreviewHint {
+  color: #071006;
+  background: var(--lime);
+  opacity: 1;
 }
 
 .imageResultPreview.hasError {

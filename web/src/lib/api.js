@@ -59,8 +59,19 @@ export function updatePassword(currentPassword, newPassword) {
   });
 }
 
+export function verifyCurrentPassword(currentPassword) {
+  return request('/api/account/password/verify', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword }),
+  });
+}
+
 export function getCredits() {
   return request('/api/account/credits');
+}
+
+export function getCreditRecords(limit = 20) {
+  return request(`/api/account/credit-records?limit=${encodeURIComponent(limit)}`);
 }
 
 export function recharge(planId, idempotencyKey, paymentMethod = 'wechat') {
@@ -79,29 +90,25 @@ export function deleteHistory() {
   return request('/api/history', { method: 'DELETE' });
 }
 
-export function createVideoTask(payload, apiKey, idempotencyKey) {
+export function createVideoTask(payload, idempotencyKey) {
   return request('/api/generate', {
     method: 'POST',
     headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {},
-    body: JSON.stringify({ ...payload, apiKey }),
+    body: JSON.stringify(payload),
   });
 }
 
-export function createImage(payload, apiKey, idempotencyKey) {
+export function createImage(payload, idempotencyKey) {
   return request('/api/images/generate', {
     method: 'POST',
     headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {},
-    body: JSON.stringify({ ...payload, apiKey }),
+    body: JSON.stringify(payload),
   });
 }
 
-export function queryVideoTask(taskId, apiKey) {
+export function queryVideoTask(taskId) {
   return request(`/api/tasks/${encodeURIComponent(taskId)}/query`, {
     method: 'POST',
-    body: JSON.stringify({ apiKey }),
+    body: JSON.stringify({}),
   });
-}
-
-export function getHealth() {
-  return request('/api/health');
 }

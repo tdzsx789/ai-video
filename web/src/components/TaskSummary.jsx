@@ -1,4 +1,4 @@
-import { Clipboard, ExternalLink, FileVideo, LoaderCircle, Sparkles } from 'lucide-react';
+import { Clipboard, FileVideo, LoaderCircle, ScanSearch, Sparkles } from 'lucide-react';
 import { formatDate, formatDuration, statusLabel, statusTone } from '../lib/format.js';
 import { getModelLabel } from '../lib/modelLabels.js';
 import shared from '../styles/shared.module.css';
@@ -8,11 +8,17 @@ export default function TaskSummary({
   task,
   currentVideoUrl,
   onCopy,
+  onPreview,
   generating,
   form,
 }) {
   const status = task?.status || (generating ? 'processing' : '');
   const tone = statusTone(status);
+  const isHailuo = String(form.model || '').toLowerCase().startsWith('minimax-hailuo');
+  const outputSpec = isHailuo
+    ? `${form.resolution} · ${form.duration === -1 ? '自动时长' : formatDuration(form.duration)}`
+    : `${form.resolution} · ${form.ratio || '16:9'} · ${form.duration === -1 ? '自动时长' : formatDuration(form.duration)}`;
+  const audioLabel = isHailuo ? '无音频' : (form.generateAudio === false ? '关闭音频' : '生成音频');
   const statusClass = tone === 'loading'
     ? styles.statusPillLoading
     : tone === 'success'
@@ -37,7 +43,21 @@ export default function TaskSummary({
 
       <div className={`${styles.taskVisual} ${visualClass}`}>
         {currentVideoUrl ? (
-          <video src={currentVideoUrl} controls playsInline preload="metadata" />
+          <button
+            type="button"
+            className={styles.taskVisualButton}
+            onClick={() => onPreview?.({
+              type: 'video',
+              url: currentVideoUrl,
+              title: '视频生成结果',
+              prompt: form.prompt,
+              model: getModelLabel(form.model),
+            })}
+            aria-label="预览生成视频"
+          >
+            <video src={currentVideoUrl} playsInline preload="metadata" />
+            <span className={styles.taskVisualOverlay}><ScanSearch size={18} />点击预览</span>
+          </button>
         ) : (
           <div className={styles.taskVisualPlaceholder}>
             {generating ? <LoaderCircle className={shared.spin} size={28} /> : <FileVideo size={29} />}
@@ -48,10 +68,20 @@ export default function TaskSummary({
 
       {currentVideoUrl ? (
         <div className={styles.resultActions}>
-          <a className={shared.inlineAction} href={currentVideoUrl} target="_blank" rel="noreferrer">
-            <ExternalLink size={14} />
-            打开视频
-          </a>
+          <button
+            className={shared.inlineAction}
+            type="button"
+            onClick={() => onPreview?.({
+              type: 'video',
+              url: currentVideoUrl,
+              title: '视频生成结果',
+              prompt: form.prompt,
+              model: getModelLabel(form.model),
+            })}
+          >
+            <ScanSearch size={14} />
+            预览视频
+          </button>
           <button className={shared.inlineAction} type="button" onClick={() => onCopy(currentVideoUrl)}>
             <Clipboard size={14} />
             复制地址
@@ -66,11 +96,11 @@ export default function TaskSummary({
         </div>
         <div className={styles.summaryLine}>
           <span>输出规格</span>
-          <strong>{form.resolution} · {form.ratio || '16:9'} · {form.duration === -1 ? '自动时长' : formatDuration(form.duration)}</strong>
+          <strong>{outputSpec}</strong>
         </div>
         <div className={styles.summaryLine}>
           <span>音频 / 水印</span>
-          <strong>{form.generateAudio === false ? '关闭音频' : '生成音频'} · {form.watermark ? '含水印' : '无水印'}</strong>
+          <strong>{audioLabel} · {form.watermark ? '含水印' : '无水印'}</strong>
         </div>
         <div className={styles.summaryLine}>
           <span>任务编号</span>
