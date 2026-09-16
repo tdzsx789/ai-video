@@ -231,6 +231,10 @@ CREATE TABLE IF NOT EXISTS video_tasks (
   created_at TIMESTAMPTZ,
   finished_at TIMESTAMPTZ,
   last_checked_at TIMESTAMPTZ,
+  next_check_at TIMESTAMPTZ,
+  sync_claim_id UUID,
+  sync_claimed_until TIMESTAMPTZ,
+  sync_error_count INTEGER NOT NULL DEFAULT 0,
   hidden_at TIMESTAMPTZ,
   saved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -250,6 +254,10 @@ ALTER TABLE video_tasks ADD COLUMN IF NOT EXISTS refund_status TEXT NOT NULL DEF
 ALTER TABLE video_tasks ADD COLUMN IF NOT EXISTS refund_reason TEXT NOT NULL DEFAULT '';
 ALTER TABLE video_tasks ADD COLUMN IF NOT EXISTS upstream_error JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE video_tasks ADD COLUMN IF NOT EXISTS last_checked_at TIMESTAMPTZ;
+ALTER TABLE video_tasks ADD COLUMN IF NOT EXISTS next_check_at TIMESTAMPTZ;
+ALTER TABLE video_tasks ADD COLUMN IF NOT EXISTS sync_claim_id UUID;
+ALTER TABLE video_tasks ADD COLUMN IF NOT EXISTS sync_claimed_until TIMESTAMPTZ;
+ALTER TABLE video_tasks ADD COLUMN IF NOT EXISTS sync_error_count INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE video_tasks ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ;
 
 CREATE INDEX IF NOT EXISTS video_tasks_saved_at_idx
@@ -274,6 +282,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS video_tasks_client_request_id_idx
 
 CREATE INDEX IF NOT EXISTS video_tasks_generation_request_idx
   ON video_tasks (generation_request_id);
+
+CREATE INDEX IF NOT EXISTS video_tasks_sync_due_idx
+  ON video_tasks (next_check_at, sync_claimed_until, created_at)
+  WHERE hidden_at IS NULL
+    AND generation_request_id IS NOT NULL
+    AND billing_status <> 'refunded';
 
 CREATE UNIQUE INDEX IF NOT EXISTS recharge_orders_user_idempotency_idx
   ON recharge_orders (user_id, idempotency_key);

@@ -1,10 +1,11 @@
 import { Coins, Image, Info, ShieldCheck, Sparkles, Video } from 'lucide-react';
 import { useState } from 'react';
 import { getModelLabel } from '../lib/modelLabels.js';
+import { isVideoProviderEnabled } from '../lib/videoProviders.js';
 import shared from '../styles/shared.module.css';
 import styles from './PricingInfoPage.module.css';
 
-const VIDEO_PRICING = [
+const ALL_VIDEO_PRICING = [
   {
     type: '文生视频',
     model: 'doubao-seedance-2-5-260628',
@@ -52,6 +53,7 @@ const VIDEO_PRICING = [
   },
   {
     type: '视频生成',
+    provider: 'kling',
     model: 'kling-v2-6-video-pro',
     version: getModelLabel('kling-v2-6-video-pro'),
     unit: '每次生成',
@@ -61,14 +63,19 @@ const VIDEO_PRICING = [
   },
   {
     type: '视频生成',
-    model: 'MiniMax-Hailuo-2.3-Fast/1080p/6s',
-    version: getModelLabel('MiniMax-Hailuo-2.3-Fast/1080p/6s'),
+    provider: 'hailuo',
+    model: 'MiniMax-H3',
+    version: getModelLabel('MiniMax-H3'),
     unit: '每次生成',
     credits: 58,
-    specs: '1080p / 6 秒',
-    note: '海螺 Fast 版本 mock 计费，适合快速高清输出。',
+    specs: '768P / 2K · 4-15 秒',
+    note: '当前账号已开放的海螺视频模型，适合自然语言视频创作。',
   },
 ];
+
+const VIDEO_PRICING = ALL_VIDEO_PRICING.filter(item => (
+  isVideoProviderEnabled(item.provider || 'seedance')
+));
 
 const IMAGE_PRICING = [
   {
@@ -88,6 +95,15 @@ const IMAGE_PRICING = [
     credits: 18,
     specs: '高细节 / 1 张',
     note: '适合更强光影、更高质感的视觉探索。',
+  },
+  {
+    type: '文生图片',
+    model: 'gemini-2.5-flash-image',
+    version: getModelLabel('gemini-2.5-flash-image'),
+    unit: '每张图片',
+    credits: 12,
+    specs: '标准质量 / 1 张',
+    note: '适合快速生成概念图、角色设定和视觉草稿。',
   },
   {
     type: '风格化图片',

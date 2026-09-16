@@ -6,9 +6,13 @@ const MODEL_LABELS = {
   'kling-v2-6-video': '可灵 2.6',
   'kling-v2-6/pro/10': '可灵 2.6 专业版',
   'kling-v2-6-video-pro': '可灵 2.6 专业版',
+  'MiniMax-H3': '海螺 H3（当前可用）',
   'MiniMax-Hailuo-2.3-Fast/768p/6s': '海螺 2.3 Fast · 768p · 6 秒',
   'MiniMax-Hailuo-2.3-Fast/768p/10s': '海螺 2.3 Fast · 768p · 10 秒',
   'MiniMax-Hailuo-2.3-Fast/1080p/6s': '海螺 2.3 Fast · 1080p · 6 秒',
+  'gpt-image-2.5': 'gpt-image 2.5',
+  'gpt-image-2.5-sunburst': 'gpt-image 2.5 Sunburst',
+  'gemini-2.5-flash-image': 'Gemini-nano-banana 2.5',
 };
 
 export function getModelLabel(model) {

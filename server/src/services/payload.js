@@ -9,6 +9,8 @@ const resolutionAliases = {
   '720P': '720p',
   '1080P': '1080p',
   '4K': '4k',
+  '768P': '768P',
+  '2K': '2K',
 };
 
 const allRatios = ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9', 'adaptive'];
@@ -48,6 +50,7 @@ function splitResources(value) {
 
 function modelFamily(model) {
   const value = String(model || '').toLowerCase();
+  if (value === 'minimax-h3') return 'hailuo-h3';
   if (/seedance[-.]?2[-.]?5/.test(value)) return '2.5';
   if (/seedance[-.]?2[-.]?0/.test(value)) return '2.0';
   if (/seedance[-.]?1[-.]?5/.test(value)) return '1.5';
@@ -58,6 +61,30 @@ function modelFamily(model) {
 function modelCapabilities(model) {
   const family = modelFamily(model);
   const value = String(model || '').toLowerCase();
+
+  if (family === 'hailuo-h3') {
+    return {
+      family,
+      resolutions: ['768P', '2K'],
+      durationMin: 4,
+      durationMax: 15,
+      supportsAutoDuration: false,
+      supportsFrames: false,
+      supportsAudio: false,
+      supportsOutputFormat: false,
+      supportsSeed: false,
+      supportsCameraFixed: false,
+      supportsReturnLastFrame: false,
+      supportsDraft: false,
+      supportsFlex: false,
+      supportsPriority: false,
+      supportsOmniReferenceTaskType: false,
+      supportsReferenceImages: false,
+      supportsReferenceVideo: false,
+      supportsReferenceAudio: false,
+      supportsAudioOnlyReference: false,
+    };
+  }
 
   if (family === '2.5') {
     return {
@@ -191,7 +218,9 @@ function normalizeResolution(value, capabilities) {
 function normalizeRatio(value, capabilities) {
   const ratio = String(value || defaultRatio).trim();
   if (allRatios.includes(ratio)) {
-    if (ratio === 'adaptive' && capabilities.family === '1.0') return defaultRatio;
+    if (ratio === 'adaptive' && ['1.0', 'hailuo-h3'].includes(capabilities.family)) {
+      return defaultRatio;
+    }
     return ratio;
   }
   return defaultRatio;
@@ -370,6 +399,28 @@ function legacyPayload(input, prompt) {
   };
 }
 
+function hailuoPayload(input, prompt, capabilities) {
+  const content = normalizeContent(input, prompt, capabilities, 'auto');
+  if (!content.length || !content.some(item => item.type === 'text')) {
+    throw new Error('海螺 H3 目前需要填写文本提示词。');
+  }
+
+  const resolution = normalizeResolution(
+    input.resolution || input.metadata?.parameters?.resolution,
+    capabilities,
+  );
+  const duration = normalizeDuration(input.duration, capabilities);
+  const ratio = normalizeRatio(input.ratio, capabilities);
+
+  return {
+    model: String(input.model || defaultModel).trim(),
+    content,
+    resolution,
+    duration,
+    ratio,
+  };
+}
+
 export function normalizeVideoPayload(input = {}) {
   const prompt = String(input.prompt || input.text || '').trim();
   const model = String(input.model || defaultModel).trim();
@@ -400,6 +451,9 @@ export function normalizeVideoPayload(input = {}) {
     throw new Error('请先填写提示词。');
   }
   if (!capabilities.family) return legacyPayload(input, prompt);
+  if (capabilities.family === 'hailuo-h3') {
+    return hailuoPayload(input, prompt, capabilities);
+  }
 
   let duration = normalizeDuration(input.duration, capabilities);
   const frames = normalizeFrames(input.frames);

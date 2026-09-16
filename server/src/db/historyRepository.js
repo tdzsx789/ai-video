@@ -1,5 +1,5 @@
 import { pool } from './pool.js';
-import { safeJson } from './safeJson.js';
+import { safeError, safeJson } from './safeJson.js';
 import { withTransaction } from './transaction.js';
 
 function mapRow(row) {
@@ -65,7 +65,13 @@ export async function upsertTask(task) {
       platform_task_id = EXCLUDED.platform_task_id,
       user_id = COALESCE(EXCLUDED.user_id, video_tasks.user_id),
       generation_request_id = COALESCE(EXCLUDED.generation_request_id, video_tasks.generation_request_id),
-      status = EXCLUDED.status,
+      status = CASE
+        WHEN video_tasks.status IN ('completed', 'succeeded') THEN video_tasks.status
+        WHEN EXCLUDED.status IN ('completed', 'succeeded') THEN EXCLUDED.status
+        WHEN video_tasks.status IN ('failed', 'cancelled', 'canceled', 'expired') THEN video_tasks.status
+        WHEN EXCLUDED.status IN ('failed', 'cancelled', 'canceled', 'expired') THEN EXCLUDED.status
+        ELSE EXCLUDED.status
+      END,
       model = COALESCE(NULLIF(EXCLUDED.model, ''), video_tasks.model),
       prompt = COALESCE(NULLIF(EXCLUDED.prompt, ''), video_tasks.prompt),
       duration = COALESCE(EXCLUDED.duration, video_tasks.duration),
@@ -75,11 +81,14 @@ export async function upsertTask(task) {
       credit_cost = GREATEST(EXCLUDED.credit_cost, video_tasks.credit_cost),
       debit_ledger_id = COALESCE(EXCLUDED.debit_ledger_id, video_tasks.debit_ledger_id),
       billing_status = CASE
+        WHEN video_tasks.billing_status IN ('settled', 'refunded') THEN video_tasks.billing_status
+        WHEN EXCLUDED.billing_status IN ('settled', 'refunded') THEN EXCLUDED.billing_status
         WHEN EXCLUDED.billing_status <> 'unbilled' THEN EXCLUDED.billing_status
         ELSE video_tasks.billing_status
       END,
       refund_ledger_id = COALESCE(EXCLUDED.refund_ledger_id, video_tasks.refund_ledger_id),
       refund_status = CASE
+        WHEN video_tasks.refund_status = 'refunded' THEN video_tasks.refund_status
         WHEN EXCLUDED.refund_status <> 'not_needed' THEN EXCLUDED.refund_status
         ELSE video_tasks.refund_status
       END,
@@ -235,8 +244,9 @@ export async function listHistory(userId, limit = 100) {
 
 export async function findTaskForUser(taskId, userId) {
   const { rows } = await pool.query(
-    `SELECT task_id, generation_request_id, user_id, model, prompt, status,
-            credit_cost, billing_status, debit_ledger_id, refund_ledger_id
+    `SELECT task_id, generation_request_id, user_id, platform_task_id, model, prompt, status,
+            duration, resolution, video_url, last_frame_url, credit_cost, billing_status,
+            debit_ledger_id, refund_ledger_id, created_at, finished_at, updated_at
      FROM video_tasks
      WHERE task_id = $1
        AND user_id = $2
@@ -245,6 +255,136 @@ export async function findTaskForUser(taskId, userId) {
     [String(taskId || '').trim(), userId],
   );
   return rows[0] || null;
+}
+
+export async function claimVideoTasksForSync({ limit = 20, leaseMs = 90_000 } = {}) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+  const safeLeaseMs = Math.min(Math.max(Number(leaseMs) || 90_000, 30_000), 300_000);
+  const { rows } = await pool.query(
+    `WITH candidates AS (
+       SELECT task_id
+       FROM video_tasks
+       WHERE user_id IS NOT NULL
+         AND generation_request_id IS NOT NULL
+         AND hidden_at IS NULL
+         AND billing_status <> 'refunded'
+         AND (
+           status NOT IN ('completed', 'succeeded', 'failed', 'cancelled', 'canceled', 'expired')
+           OR billing_status = 'debited'
+           OR (
+             status IN ('completed', 'succeeded')
+             AND COALESCE(video_url, '') = ''
+           )
+         )
+         AND (sync_claimed_until IS NULL OR sync_claimed_until <= NOW())
+         AND (next_check_at IS NULL OR next_check_at <= NOW())
+       ORDER BY COALESCE(next_check_at, created_at), created_at
+       FOR UPDATE SKIP LOCKED
+       LIMIT $1
+     )
+     UPDATE video_tasks AS task
+     SET sync_claimed_until = NOW() + ($2 * INTERVAL '1 millisecond'),
+         sync_claim_id = gen_random_uuid(),
+         last_checked_at = NOW(),
+         updated_at = NOW()
+     FROM candidates
+     WHERE task.task_id = candidates.task_id
+     RETURNING task.task_id,
+       task.generation_request_id,
+       task.user_id,
+       task.platform_task_id,
+       task.model,
+       task.prompt,
+       task.status,
+       task.duration,
+       task.resolution,
+       task.video_url,
+       task.last_frame_url,
+       task.credit_cost,
+       task.billing_status,
+       task.debit_ledger_id,
+       task.refund_ledger_id,
+       task.sync_error_count,
+       task.sync_claim_id
+    `,
+    [safeLimit, safeLeaseMs],
+  );
+  return rows;
+}
+
+export async function claimVideoTaskForSync({ taskId, leaseMs = 90_000 } = {}) {
+  const safeLeaseMs = Math.min(Math.max(Number(leaseMs) || 90_000, 30_000), 300_000);
+  const { rows } = await pool.query(
+    `UPDATE video_tasks
+     SET sync_claimed_until = NOW() + ($2 * INTERVAL '1 millisecond'),
+         sync_claim_id = gen_random_uuid(),
+         last_checked_at = NOW(),
+         updated_at = NOW()
+     WHERE task_id = $1
+       AND hidden_at IS NULL
+       AND (
+         status NOT IN ('completed', 'succeeded', 'failed', 'cancelled', 'canceled', 'expired')
+         OR billing_status = 'debited'
+         OR (
+           status IN ('completed', 'succeeded')
+           AND COALESCE(video_url, '') = ''
+         )
+       )
+       AND (sync_claimed_until IS NULL OR sync_claimed_until <= NOW())
+       AND (next_check_at IS NULL OR next_check_at <= NOW())
+     RETURNING task_id,
+       generation_request_id,
+       user_id,
+       platform_task_id,
+       model,
+       prompt,
+       status,
+       duration,
+       resolution,
+       video_url,
+       last_frame_url,
+       credit_cost,
+       billing_status,
+       debit_ledger_id,
+       refund_ledger_id,
+       sync_error_count,
+       sync_claim_id`,
+    [String(taskId || '').trim(), safeLeaseMs],
+  );
+  return rows[0] || null;
+}
+
+export async function releaseVideoTaskSync({
+  taskId,
+  claimId = '',
+  terminal = false,
+  error = null,
+  retryDelayMs = 5_000,
+} = {}) {
+  const safeDelayMs = Math.min(Math.max(Number(retryDelayMs) || 5_000, 1_000), 300_000);
+  const serializedError = JSON.stringify(error ? safeError(error) : {});
+  await pool.query(
+    `UPDATE video_tasks
+     SET sync_claimed_until = NULL,
+         sync_claim_id = NULL,
+         last_checked_at = NOW(),
+         next_check_at = CASE
+           WHEN $3 THEN NULL
+           ELSE NOW() + ($4 * INTERVAL '1 millisecond')
+         END,
+         sync_error_count = CASE
+           WHEN $3 THEN 0
+           ELSE LEAST(sync_error_count + 1, 100)
+         END,
+         upstream_error = CASE
+           WHEN $3 THEN '{}'::jsonb
+           ELSE $5::jsonb
+         END,
+         updated_at = NOW()
+     WHERE task_id = $1
+       AND sync_claim_id = NULLIF($2, '')::uuid`,
+    [String(taskId || ''), String(claimId || ''), Boolean(terminal), safeDelayMs, serializedError],
+  );
 }
 
 export async function clearHistory(userId) {

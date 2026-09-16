@@ -22,12 +22,14 @@ import StatusBanner from '../components/StatusBanner.jsx';
 import TaskSummary from '../components/TaskSummary.jsx';
 import { createImage, createVideoTask, deleteHistory, getHealth, getHistory, queryVideoTask } from '../lib/api.js';
 import { formatDate, getTaskStatus, getVideoUrl, TERMINAL_STATUSES } from '../lib/format.js';
+import { getModelLabel } from '../lib/modelLabels.js';
 import shared from '../styles/shared.module.css';
 import styles from './StudioPage.module.css';
 
 const DEFAULT_MODEL = 'doubao-seedance-2-5-260628';
 const POLL_INTERVAL = 5000;
 const MAX_POLL_TIME = 30 * 60 * 1000;
+const RETRIABLE_POLL_STATUSES = new Set([404, 408, 409, 425, 429, 500, 502, 503, 504]);
 
 function initialForm() {
   return {
@@ -81,6 +83,21 @@ function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function canRetryPoll(error) {
+  const status = Number(error?.status || error?.data?.status || 0);
+  return !status || RETRIABLE_POLL_STATUSES.has(status);
+}
+
+function needsVideoRecovery(item) {
+  const status = getTaskStatus(item);
+  return item?.kind === 'video'
+    && item?.id
+    && (
+      !TERMINAL_STATUSES.has(status)
+      || (['completed', 'succeeded'].includes(status) && !getVideoUrl(item))
+    );
+}
+
 function imageStateLabel({ generating, result, error, requested }) {
   if (generating) return '生成中';
   if (error) return '生成失败';
@@ -120,7 +137,7 @@ function ImageResultPanel({ generating, requested, result, error, form, onCopy }
             {generating ? (
               <>
                 <span className={styles.previewSpinner} />
-                <strong>正在调用 {form.model || 'gpt-image-2.5'}</strong>
+                <strong>正在调用 {getModelLabel(form.model || 'gpt-image-2.5')}</strong>
                 <small>生成完成后会在这里显示图片结果</small>
               </>
             ) : error ? (
@@ -157,12 +174,12 @@ function ImageResultPanel({ generating, requested, result, error, form, onCopy }
       ) : null}
       <div className={styles.imageResultMeta}>
         <div><span>输出画幅</span><strong>{result?.ratio || form.ratio}</strong></div>
-        <div><span>图片模型</span><strong>{result?.model || form.model || 'gpt-image-2.5'}</strong></div>
+        <div><span>图片模型</span><strong>{getModelLabel(result?.model || form.model || 'gpt-image-2.5')}</strong></div>
         <div><span>当前状态</span><strong>{stateLabel}</strong></div>
       </div>
       <div className={styles.imageConnectionNote}>
         <ShieldCheck size={15} />
-        <span>{hasImage ? `生成尺寸 ${result?.size || '跟随画幅设置'}，可下载或复制图片地址。` : '图片创作已接入 gpt-image-2.5 生成链路。'}</span>
+        <span>{hasImage ? `生成尺寸 ${result?.size || '跟随画幅设置'}，可下载或复制图片地址。` : `${getModelLabel(form.model || 'gpt-image-2.5')} 已接入图片创作链路。`}</span>
       </div>
     </aside>
   );
@@ -195,6 +212,7 @@ export default function StudioPage({
   const [statusMessage, setStatusMessage] = useState('');
   const [health, setHealth] = useState(null);
   const pollingRef = useRef(false);
+  const recoveredTaskIdsRef = useRef(new Set());
 
   const currentVideoUrl = task?.videoUrl || '';
   const currentStatus = task?.status || (generating ? 'processing' : '');
@@ -246,19 +264,31 @@ export default function StudioPage({
     const startedAt = Date.now();
     pollingRef.current = true;
     let latest = initialTask;
+    let consecutiveErrors = 0;
 
     while (pollingRef.current && Date.now() - startedAt < MAX_POLL_TIME) {
       try {
         const response = await queryVideoTask(taskId, apiKey);
+        consecutiveErrors = 0;
         syncCredits(response);
         latest = mergeTaskResponse(latest, response);
         setTask(latest);
 
         const status = getTaskStatus(response.data);
         if (TERMINAL_STATUSES.has(status)) {
+          const hasVideoUrl = Boolean(
+            response.task?.videoUrl
+            || response.data?.videoUrl
+            || getVideoUrl(response.data),
+          );
+          if (['completed', 'succeeded'].includes(status) && !hasVideoUrl) {
+            setStatusMessage('任务状态已完成，正在获取视频地址…');
+            await wait(POLL_INTERVAL);
+            continue;
+          }
           pollingRef.current = false;
           if (['completed', 'succeeded'].includes(status)) {
-            setStatusMessage(response.task?.videoUrl || getVideoUrl(response.data)
+            setStatusMessage(hasVideoUrl
               ? '视频生成完成，地址已保存到历史记录。'
               : '任务完成，但上游暂未返回视频地址。');
             await loadHistory();
@@ -270,9 +300,17 @@ export default function StudioPage({
 
         setStatusMessage(`任务正在生成${response.data?.progress ? ` · ${response.data.progress}` : '…'}`);
       } catch (error) {
-        pollingRef.current = false;
-        setStatusMessage(error.message || '查询任务失败。');
-        return latest;
+        consecutiveErrors += 1;
+        if (!canRetryPoll(error)) {
+          pollingRef.current = false;
+          setStatusMessage(error.message || '查询任务失败，请稍后点击“继续查询”。');
+          return latest;
+        }
+
+        const retryDelay = Math.min(POLL_INTERVAL * consecutiveErrors, 15_000);
+        setStatusMessage(`任务状态查询暂时失败，${Math.ceil(retryDelay / 1000)} 秒后重试…`);
+        await wait(retryDelay);
+        continue;
       }
 
       await wait(POLL_INTERVAL);
@@ -282,6 +320,30 @@ export default function StudioPage({
     setStatusMessage('轮询已超时，可以稍后用任务编号继续查询。');
     return latest;
   }, [apiKey, loadHistory, onCreditsChange]);
+
+  useEffect(() => {
+    if (generating || pollingRef.current) return;
+    const pending = history.find(item => (
+      needsVideoRecovery(item)
+      && !recoveredTaskIdsRef.current.has(item.id)
+    ));
+    if (!pending) return;
+
+    recoveredTaskIdsRef.current.add(pending.id);
+    const recoveredTask = {
+      id: pending.id,
+      status: getTaskStatus(pending) || 'processing',
+      videoUrl: pending.videoUrl || '',
+      createdAt: pending.createdAt || pending.savedAt || new Date().toISOString(),
+      finishedAt: pending.finishedAt || '',
+    };
+    setTask(recoveredTask);
+    setGenerating(true);
+    setStatusMessage(`正在恢复任务：${pending.id}`);
+    pollTask(pending.id, recoveredTask).finally(() => {
+      setGenerating(false);
+    });
+  }, [generating, history, pollTask]);
 
   const generate = async () => {
     const hasCreativeInput = [
@@ -341,7 +403,7 @@ export default function StudioPage({
     setImageRequested(true);
     setImageResult(null);
     setImageError('');
-    setStatusMessage(`正在调用 ${imageForm.model || 'gpt-image-2.5'} 生成图片…`);
+    setStatusMessage(`正在调用 ${getModelLabel(imageForm.model || 'gpt-image-2.5')} 生成图片…`);
 
     try {
       const response = await createImage(imageForm, apiKey, crypto.randomUUID());

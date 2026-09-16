@@ -1,5 +1,6 @@
 import { Clipboard, ExternalLink, Film, Image, LoaderCircle, Play, RotateCcw } from 'lucide-react';
 import { formatDate, formatDuration, statusLabel, statusTone } from '../../lib/format.js';
+import { getModelLabel } from '../../lib/modelLabels.js';
 import shared from '../../styles/shared.module.css';
 import styles from './HistoryCard.module.css';
 
@@ -44,7 +45,7 @@ export default function HistoryCard({ item, onCopy, onUseTask }) {
         <p className={styles.historyPrompt}>{item.prompt || '未记录提示词'}</p>
         <div className={styles.historyCardMeta}>
           <span>{isImage ? (item.ratio || '自动画幅') : (item.resolution || '自动分辨率')}</span>
-          <span>{isImage ? (item.model || '图片模型') : formatDuration(item.duration)}</span>
+          <span>{isImage ? getModelLabel(item.model || '图片模型') : formatDuration(item.duration)}</span>
           <span>{item.creditCost ? `${item.creditCost} 积分` : '未计费'}</span>
           <span title={item.id}>{item.id?.slice(0, 16) || '无任务编号'}</span>
         </div>

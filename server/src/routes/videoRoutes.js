@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import {
-  findTaskForUser,
   upsertTask,
 } from '../db/historyRepository.js';
 import {
@@ -8,12 +7,12 @@ import {
   markGenerationSubmitted,
   markGenerationUnknown,
   reserveGeneration,
-  settleGeneration,
 } from '../db/generationRepository.js';
-import { createVideoTask, queryVideoTask, resolveApiKey } from '../services/seedanceClient.js';
+import { createVideoTask, resolveApiKey } from '../services/seedanceClient.js';
 import { normalizeVideoPayload } from '../services/payload.js';
-import { extractTaskId, taskToClient, taskToRecord } from '../services/taskMapper.js';
+import { extractTaskId, isTerminalTaskStatus, taskToRecord } from '../services/taskMapper.js';
 import { GENERATION_COSTS } from '../services/pricing.js';
+import { syncVideoTask } from '../services/videoTaskSync.js';
 import { requireAuth } from '../middleware/auth.js';
 import { httpError } from '../utils/httpError.js';
 
@@ -110,12 +109,35 @@ videoRouter.post('/generate', async (req, res, next) => {
         });
         return;
       }
+      let replayedSync = null;
+      if (generation.externalTaskId) {
+        try {
+          replayedSync = await syncVideoTask({
+            taskId: generation.externalTaskId,
+            userId: req.user.id,
+            apiKey,
+          });
+        } catch (error) {
+          console.warn(`重试同步视频任务失败（${generation.externalTaskId}）：`, error.message);
+        }
+      }
+      const replayedTask = replayedSync?.clientTask || (
+        generation.externalTaskId
+          ? { id: generation.externalTaskId, status: generation.status }
+          : null
+      );
       res.status(generation.externalTaskId ? 200 : 202).json({
         ok: true,
         replayed: true,
         taskId: generation.externalTaskId,
-        ...generationResponse(generation, reserve),
-        data: generation.externalTaskId ? { id: generation.externalTaskId, status: generation.status } : null,
+        ...generationResponse({
+          ...generation,
+          status: replayedTask?.status || generation.status,
+          billingStatus: replayedSync?.billingStatus || generation.billingStatus,
+        }, {
+          balance: replayedSync?.balance ?? reserve.balance,
+        }),
+        data: replayedTask,
       });
       return;
     }
@@ -169,14 +191,34 @@ videoRouter.post('/generate', async (req, res, next) => {
       data: response.data,
       payload,
     });
+    const initialRecord = taskToRecord(response.data, payload);
+    let initialSync = null;
+    if (task && (isTerminalTaskStatus(initialRecord.status) || initialRecord.videoUrl)) {
+      try {
+        initialSync = await syncVideoTask({
+          taskId,
+          userId: req.user.id,
+          apiKey,
+        });
+      } catch (error) {
+        console.warn(`初始同步视频任务失败（${taskId}）：`, error.message);
+      }
+    }
+    const responseTask = initialSync?.clientTask || task;
 
     res.status(response.status || 200).json({
       ok: true,
       status: response.status,
       taskId,
-      data: { id: taskId, status: submitted.status, model: submitted.model },
-      task,
-      ...generationResponse(submitted, { balance: reserve.balance }),
+      data: responseTask || { id: taskId, status: submitted.status, model: submitted.model },
+      task: responseTask,
+      ...generationResponse({
+        ...submitted,
+        status: initialSync?.clientTask?.status || submitted.status,
+        billingStatus: initialSync?.billingStatus || submitted.billingStatus,
+      }, {
+        balance: initialSync?.balance ?? reserve.balance,
+      }),
     });
   } catch (error) {
     next(error);
@@ -187,84 +229,28 @@ videoRouter.post('/tasks/:taskId/query', async (req, res, next) => {
   try {
     const taskId = String(req.params.taskId || '').trim();
     if (!taskId) throw httpError(400, '缺少任务编号。');
-
-    const ownedTask = await findTaskForUser(taskId, req.user.id);
-    if (!ownedTask) throw httpError(404, '任务不存在。');
-
     const apiKey = apiKeyFrom(req);
-    if (!apiKey) throw httpError(400, '缺少 API Key，请在页面输入或配置 OPENAI_NEXT_API_KEY。');
-    let response;
-    try {
-      response = await queryVideoTask(apiKey, taskId);
-    } catch (error) {
-      await markGenerationUnknown({
-        userId: req.user.id,
-        generationId: ownedTask.generation_request_id,
-        error,
-      });
-      throw error;
-    }
-    if (!response.ok) {
-      await markGenerationUnknown({
-        userId: req.user.id,
-        generationId: ownedTask.generation_request_id,
-        error: response.error || new Error(`上游查询失败（${response.status}）。`),
-      });
-      res.status(response.status >= 400 && response.status < 500 ? response.status : 502).json({
-        ok: false,
-        status: response.status,
-        error: response.error,
-        generationId: ownedTask.generation_request_id,
-      });
-      return;
-    }
-
-    const generation = {
-      id: ownedTask.generation_request_id,
-      creditCost: Number(ownedTask.credit_cost || GENERATION_COSTS.video),
-      debitLedgerId: ownedTask.debit_ledger_id,
-      billingStatus: ownedTask.billing_status,
-    };
-    const task = await saveVideoRecord({
+    const synced = await syncVideoTask({
+      taskId,
       userId: req.user.id,
-      generation,
-      data: response.data,
-      payload: {},
+      apiKey,
     });
-    const record = taskToRecord(response.data);
-    const terminal = ['completed', 'succeeded', 'failed', 'cancelled', 'canceled', 'expired']
-      .includes(String(record.status || '').toLowerCase());
-    let billing = { balance: undefined, generation: null };
+    const clientTask = synced.clientTask || {
+      id: taskId,
+      status: synced.record?.status || 'processing',
+      videoUrl: synced.record?.videoUrl || '',
+    };
 
-    if (terminal && ['failed', 'cancelled', 'canceled', 'expired'].includes(String(record.status).toLowerCase())) {
-      billing = await failGeneration({
-        userId: req.user.id,
-        generationId: ownedTask.generation_request_id,
-        kind: 'video',
-        amount: generation.creditCost,
-        reason: `任务结束状态：${record.status}`,
-      });
-    } else if (terminal) {
-      billing = await settleGeneration({
-        userId: req.user.id,
-        generationId: ownedTask.generation_request_id,
-        resultUrl: record.videoUrl,
-        resultMetadata: {
-          taskId,
-          lastFrameUrl: record.lastFrameUrl,
-        },
-      });
-    }
-
-    res.status(response.status || 200).json({
+    res.status(synced.response?.status || 200).json({
       ok: true,
-      status: response.status,
-      data: taskToClient(response.data),
-      task,
-      clientTask: response.ok ? taskToClient(response.data) : null,
-      generationId: ownedTask.generation_request_id,
-      balance: billing.balance,
-      billingStatus: billing.generation?.billingStatus || ownedTask.billing_status,
+      status: synced.response?.status || 200,
+      data: clientTask,
+      task: clientTask,
+      clientTask,
+      generationId: synced.generationId,
+      balance: synced.balance,
+      billingStatus: synced.billingStatus,
+      source: synced.source || 'upstream',
     });
   } catch (error) {
     next(error);

@@ -1,6 +1,7 @@
-import { Check, ChevronDown, Image, Sparkles, WandSparkles } from 'lucide-react';
+import { Check, ChevronDown, Coins, Image, Sparkles, WandSparkles } from 'lucide-react';
 import SectionHeading from '../../components/SectionHeading.jsx';
 import StepBadge from '../../components/StepBadge.jsx';
+import { getModelLabel } from '../../lib/modelLabels.js';
 import shared from '../../styles/shared.module.css';
 import generatorStyles from './GeneratorForm.module.css';
 import styles from './ImageGeneratorForm.module.css';
@@ -10,8 +11,15 @@ export const IMAGE_TOOLS = [
     id: 'gpt-image',
     label: 'gpt-image',
     models: [
-      'gpt-image-2.5',
-      'gpt-image-2.5-sunburst',
+      { key: 'gpt-image-2.5', label: '2.5' },
+      { key: 'gpt-image-2.5-sunburst', label: '2.5 Sunburst' },
+    ],
+  },
+  {
+    id: 'gemini-nano-banana',
+    label: 'Gemini-nano-banana',
+    models: [
+      { key: 'gemini-2.5-flash-image', label: '2.5' },
     ],
   },
 ];
@@ -22,9 +30,22 @@ const STYLE_OPTIONS = [
   { id: 'illustration', label: '插画风' },
   { id: 'product', label: '产品棚拍' },
 ];
+const IMAGE_GENERATION_COST = 12;
+
+function modelKey(model) {
+  return typeof model === 'string' ? model : model.key;
+}
+
+function modelLabel(model) {
+  return typeof model === 'string' ? getModelLabel(model) : model.label;
+}
 
 function getToolForModel(model) {
-  return IMAGE_TOOLS.find(tool => tool.models.includes(model)) || IMAGE_TOOLS[0];
+  return IMAGE_TOOLS.find(tool => tool.models.some(item => modelKey(item) === model)) || IMAGE_TOOLS[0];
+}
+
+function getSelectedModel(tool, model) {
+  return tool.models.find(item => modelKey(item) === model) || tool.models[0];
 }
 
 export default function ImageGeneratorForm({
@@ -34,10 +55,10 @@ export default function ImageGeneratorForm({
   generating,
 }) {
   const selectedTool = getToolForModel(form.model);
-  const selectedModel = selectedTool.models.includes(form.model) ? form.model : selectedTool.models[0];
+  const selectedModel = getSelectedModel(selectedTool, form.model);
 
   const chooseTool = tool => {
-    onChange({ model: tool.models[0] });
+    onChange({ model: modelKey(tool.models[0]) });
   };
 
   return (
@@ -52,7 +73,7 @@ export default function ImageGeneratorForm({
             </div>
           </div>
 
-          <div className={`${generatorStyles.toolSegment} ${styles.singleToolSegment}`} role="group" aria-label="选择图片 AI 工具">
+          <div className={`${generatorStyles.toolSegment} ${styles.imageToolSegment}`} role="group" aria-label="选择图片 AI 工具">
             {IMAGE_TOOLS.map(tool => (
               <button
                 type="button"
@@ -81,9 +102,9 @@ export default function ImageGeneratorForm({
           </div>
 
           <label className={generatorStyles.modelSelectField}>
-            <select value={selectedModel} onChange={event => onChange({ model: event.target.value })} disabled={generating}>
+            <select value={modelKey(selectedModel)} onChange={event => onChange({ model: event.target.value })} disabled={generating}>
               {selectedTool.models.map(model => (
-                <option key={model} value={model}>{model}</option>
+                <option key={modelKey(model)} value={modelKey(model)}>{modelLabel(model)}</option>
               ))}
             </select>
             <ChevronDown size={15} aria-hidden="true" />
@@ -102,7 +123,7 @@ export default function ImageGeneratorForm({
           />
           <div className={styles.promptHeaderMeta}>
             <div className={generatorStyles.currentConfigStrip} aria-label="当前图片模型配置">
-              <span>{selectedTool.label} · {selectedModel}</span>
+              <span>{selectedTool.label} · {modelLabel(selectedModel)}</span>
             </div>
           </div>
         </div>
@@ -160,15 +181,21 @@ export default function ImageGeneratorForm({
             <WandSparkles size={15} />
             <span>支持中文描述 · 高清草稿</span>
           </div>
-          <button
-            type="button"
-            className={`${shared.submitButton} ${styles.imageSubmitButton}`}
-            onClick={onGenerate}
-            disabled={generating || !form.prompt.trim()}
-          >
-            {generating ? <span className={styles.buttonLoader} /> : <Sparkles size={17} />}
-            {generating ? '正在生成…' : '生成图片'}
-          </button>
+          <div className={styles.imageSubmitArea}>
+            <span className={styles.imageCostBadge}>
+              <Coins size={14} />
+              {IMAGE_GENERATION_COST} 积分 / 张
+            </span>
+            <button
+              type="button"
+              className={`${shared.submitButton} ${styles.imageSubmitButton}`}
+              onClick={onGenerate}
+              disabled={generating || !form.prompt.trim()}
+            >
+              {generating ? <span className={styles.buttonLoader} /> : <Sparkles size={17} />}
+              {generating ? '正在生成…' : '生成图片'}
+            </button>
+          </div>
         </div>
       </section>
     </div>

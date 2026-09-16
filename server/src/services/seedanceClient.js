@@ -1,8 +1,7 @@
 import { config } from '../config/env.js';
 import { safeExternalText } from '../db/safeJson.js';
+import { extractTaskStatus, isTerminalTaskStatus } from './taskMapper.js';
 import { readResponseText } from './http.js';
-
-const terminalStatuses = new Set(['completed', 'succeeded', 'failed', 'cancelled', 'canceled', 'expired']);
 
 function decodeMaybeJson(value) {
   if (typeof value !== 'string') return null;
@@ -34,8 +33,7 @@ function deepDecode(value, depth = 0) {
 
 function findErrorNode(value) {
   if (!value || typeof value !== 'object') return null;
-  if ((typeof value.code === 'string' || typeof value.code === 'number')
-    && (typeof value.message === 'string' || typeof value.description === 'string')) {
+  if (typeof value.message === 'string' || typeof value.description === 'string') {
     return value;
   }
   for (const child of Object.values(value)) {
@@ -62,6 +60,14 @@ function errorSummary(response, payload = {}) {
       code: 'ModelNotOpen',
       title: '模型未开通',
       message: `当前账号还没有开通 ${payload.model || '该模型'}，请先在 Ark Console 开通模型服务。`,
+      requestId: requestIdFrom(source),
+    };
+  }
+  if (/no available channels for model/i.test(source)) {
+    return {
+      code: 'NoAvailableChannel',
+      title: '模型暂无可用通道',
+      message: `当前账号分组没有可用的 ${payload.model || '该模型'} 通道，请切换到“海螺 H3（MiniMax-H3）”或联系上游开通该模型。`,
       requestId: requestIdFrom(source),
     };
   }
@@ -153,7 +159,7 @@ export async function queryVideoTask(apiKey, taskId) {
   });
   return {
     ...response,
-    terminal: terminalStatuses.has(String(response.data?.status || '').toLowerCase()),
+    terminal: isTerminalTaskStatus(extractTaskStatus(response.data)),
     error: response.ok ? null : errorSummary(response),
   };
 }

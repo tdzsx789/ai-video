@@ -3,8 +3,8 @@
   gap: 14px;
 }
 
-.singleToolSegment {
-  grid-template-columns: minmax(0, 1fr);
+.imageToolSegment {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .promptHeaderMeta {
@@ -81,6 +81,28 @@
   color: var(--lime);
 }
 
+.imageSubmitArea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.imageCostBadge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  min-height: 31px;
+  padding: 0 8px;
+  border: 1px solid rgba(130, 229, 27, 0.36);
+  border-radius: 5px;
+  color: var(--lime);
+  background: rgba(130, 229, 27, 0.07);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .imageSubmitButton {
   width: auto;
   min-width: 175px;
@@ -108,7 +130,7 @@
     gap: 10px;
   }
 
-  .singleToolSegment {
+  .imageToolSegment {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -124,5 +146,18 @@
 
   .imageSubmitButton {
     width: 100%;
+  }
+
+  .imageSubmitArea {
+    width: 100%;
+  }
+
+  .imageCostBadge {
+    justify-content: center;
+    min-width: 102px;
+  }
+
+  .imageSubmitButton {
+    flex: 1 1 auto;
   }
 }

@@ -3,6 +3,7 @@ import { Check, ChevronDown, LoaderCircle, Sparkles, WandSparkles } from 'lucide
 import SectionHeading from '../../components/SectionHeading.jsx';
 import StepBadge from '../../components/StepBadge.jsx';
 import { getModelLabel } from '../../lib/modelLabels.js';
+import { isVideoProviderEnabled } from '../../lib/videoProviders.js';
 import {
   getDurationOptions,
   getRatioOptions,
@@ -22,7 +23,7 @@ const MODE_OPTIONS = [
   { value: 'extend', label: '视频延展' },
 ];
 
-export const AI_TOOLS = [
+const ALL_AI_TOOLS = [
   {
     id: 'seedance',
     label: 'seedance',
@@ -44,14 +45,14 @@ export const AI_TOOLS = [
   },
   {
     id: 'hailuo',
-    label: '海螺2.3',
+    label: '海螺',
     models: [
-      'MiniMax-Hailuo-2.3-Fast/768p/6s',
-      'MiniMax-Hailuo-2.3-Fast/768p/10s',
-      'MiniMax-Hailuo-2.3-Fast/1080p/6s',
+      { key: 'MiniMax-H3', label: '海螺 H3（当前可用）' },
     ],
   },
 ];
+
+export const AI_TOOLS = ALL_AI_TOOLS.filter(tool => isVideoProviderEnabled(tool.id));
 
 function modelKey(model) {
   return typeof model === 'string' ? model : model.key;
@@ -99,6 +100,7 @@ export default function GeneratorForm({
   const selectedTool = getToolForModel(form.model);
   const selectedModel = getSelectedModel(selectedTool, form.model);
   const isSeedance = selectedTool.id === 'seedance';
+  const isHailuo = selectedTool.id === 'hailuo';
   const capabilities = getSeedanceCapabilities(form.model);
   const mode = form.omniReferenceTaskType || 'auto';
   const isEditing = isSeedance && mode === 'edit';
@@ -141,8 +143,12 @@ export default function GeneratorForm({
   const referenceStatus = hasReferenceInput
     ? modeRequiresVideo && !form.referenceVideoUrl?.trim() ? '需视频' : '已添加'
     : modeRequiresVideo || mode === 'reference' ? '需要添加' : '可选';
-  const durationOptions = isSeedance ? getDurationOptions(capabilities) : LEGACY_DURATION_OPTIONS;
-  const ratioOptions = isSeedance ? getRatioOptions(capabilities) : LEGACY_RATIO_OPTIONS;
+  const durationOptions = isSeedance || isHailuo
+    ? getDurationOptions(capabilities)
+    : LEGACY_DURATION_OPTIONS;
+  const ratioOptions = isSeedance || isHailuo
+    ? getRatioOptions(capabilities)
+    : LEGACY_RATIO_OPTIONS;
   const advancedOptionCount = isSeedance
     ? [
       capabilities.supportsOutputFormat,
@@ -300,8 +306,8 @@ export default function GeneratorForm({
                   onChange={event => onChange({ resolution: event.target.value })}
                   disabled={disabled || Boolean(form.draft)}
                 >
-                  {(isSeedance ? capabilities.resolutions : ['480P', '720P', '1080P']).map(value => (
-                    <option key={value} value={value}>{value.toLowerCase()}</option>
+                  {(isSeedance || isHailuo ? capabilities.resolutions : ['480P', '720P', '1080P']).map(value => (
+                    <option key={value} value={value}>{value === '2K' ? '2K' : value.toLowerCase()}</option>
                   ))}
                 </select>
               </label>

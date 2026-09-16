@@ -1,6 +1,26 @@
 const RATIOS = ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9', 'adaptive'];
 
 const CAPABILITIES = {
+  'hailuo-h3': {
+    family: 'hailuo-h3',
+    resolutions: ['768P', '2K'],
+    durationMin: 4,
+    durationMax: 15,
+    supportsAutoDuration: false,
+    supportsFrames: false,
+    supportsAudio: false,
+    supportsOutputFormat: false,
+    supportsSeed: false,
+    supportsCameraFixed: false,
+    supportsReturnLastFrame: false,
+    supportsDraft: false,
+    supportsFlex: false,
+    supportsOmniReferenceTaskType: false,
+    supportsReferenceImages: false,
+    supportsReferenceVideo: false,
+    supportsReferenceAudio: false,
+    supportsAudioOnlyReference: false,
+  },
   '2.5': {
     family: '2.5',
     resolutions: ['480P', '720P', '1080P'],
@@ -106,6 +126,7 @@ const FALLBACK_CAPABILITIES = {
 
 function getModelFamily(model) {
   const value = String(model || '').toLowerCase();
+  if (value === 'minimax-h3') return 'hailuo-h3';
   if (/seedance[-.]?2[-.]?5/.test(value)) return '2.5';
   if (/seedance[-.]?2[-.]?0/.test(value)) return '2.0';
   if (/seedance[-.]?1[-.]?5/.test(value)) return '1.5';
@@ -138,7 +159,9 @@ export function getDurationOptions(capabilities) {
 }
 
 export function getRatioOptions(capabilities) {
-  return RATIOS.filter(ratio => ratio !== 'adaptive' || capabilities.family !== '1.0');
+  return RATIOS.filter(
+    ratio => ratio !== 'adaptive' || !['1.0', 'hailuo-h3'].includes(capabilities.family),
+  );
 }
 
 export function normalizeModelForm(form, model) {
@@ -181,7 +204,7 @@ export function normalizeModelForm(form, model) {
 
   const ratio = String(form.ratio || '16:9');
   if (!getRatioOptions(capabilities).includes(ratio)) {
-    next.ratio = capabilities.family === '1.0' ? '16:9' : 'adaptive';
+    next.ratio = ['1.0', 'hailuo-h3'].includes(capabilities.family) ? '16:9' : 'adaptive';
   }
 
   return next;

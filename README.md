@@ -1,13 +1,13 @@
 # AI金铲
 
-AI金铲是一个面向视频与图片创作的 AI 工作区，当前接入 Seedance 文生视频任务链路与 `gpt-image-2.5` 图片生成，并提供用户中心和积分体系。
+AI金铲是一个面向视频与图片创作的 AI 工作区，当前接入 Seedance 文生视频任务链路与 `gpt-image`、`Gemini-nano-banana` 图片生成，并提供用户中心和积分体系。
 
 ## 业务框架
 
 - 登录：当前预置两个 mock 账户，注册流程暂不开放
 - 用户中心：账户资料、邮箱与手机号、密码安全设置
 - 充值积分：账户余额、充值订单和不可变积分流水，当前充值为 mock 入账
-- 视频创作 / 图片创作：视频走 Seedance 任务链路，视频工作台支持官方常用的时长、帧数、分辨率、画幅、音频、水印、尾帧、提示词扩写、参考素材、随机种子、回调地址和任务有效期配置；图片通过 OpenAI 兼容接口调用 `gpt-image-2.5` 或 `gpt-image-2.5-sunburst`
+- 视频创作 / 图片创作：视频走 Seedance 任务链路，视频工作台支持官方常用的时长、帧数、分辨率、画幅、音频、水印、尾帧、提示词扩写、参考素材、随机种子、回调地址和任务有效期配置；图片通过 OpenAI 兼容接口调用 `gpt-image-2.5`、`gpt-image-2.5-sunburst` 或 `gemini-2.5-flash-image`
 - 历史记录：视频与图片任务按账户自动归档、复制地址、继续查询
 
 当前 mock 账户：
@@ -66,7 +66,7 @@ npm start
 
 ## 配置
 
-复制 `server/.env.example` 为 `server/.env`，填写 `OPENAI_NEXT_API_KEY`。图片工作台支持 `gpt-image-2.5` 和 `gpt-image-2.5-sunburst`，服务端默认使用 `gpt-image-2.5`；`DRAW_BASE_URL` 支持填写带或不带 `/v1` 的地址。也可以在视频工作区侧栏的“生成密钥”面板临时输入 API Key。密钥只参与当前会话的生成请求，不会写入 PostgreSQL 历史记录或生成请求 JSON。
+复制 `server/.env.example` 为 `server/.env`，填写 `OPENAI_NEXT_API_KEY`。图片工作台支持 `gpt-image-2.5`、`gpt-image-2.5-sunburst` 和 `gemini-2.5-flash-image`，服务端默认使用 `gpt-image-2.5`；`DRAW_BASE_URL` 支持填写带或不带 `/v1` 的地址。`gemini-2.5-flash-image` 会优先调用 `/v1/chat/completions`，兼容你提供的 OpenAI SDK Demo。也可以在视频工作区侧栏的“生成密钥”面板临时输入 API Key。密钥只参与当前会话的生成请求，不会写入 PostgreSQL 历史记录或生成请求 JSON。
 
 旧版 `server/seedance-history.json` 可以用 `npm run db:import` 导入 PostgreSQL。
 

@@ -168,6 +168,47 @@ function shouldTryChatFallback(response) {
   return Number(response?.status) === 400 && /(unsupported|not found|unknown endpoint|images\/generations)/i.test(source);
 }
 
+function shouldTryImageFallback(response) {
+  const source = `${JSON.stringify(response?.data || {})}\n${response?.raw || ''}`;
+  if ([404, 405].includes(Number(response?.status))) return true;
+  return Number(response?.status) === 400
+    && /(unsupported|not found|unknown endpoint|chat\/completions)/i.test(source);
+}
+
+function isChatFirstImageModel(model) {
+  return /^gemini-/i.test(String(model || '').trim());
+}
+
+function imageGenerationRequest(apiKey, payload, prompt) {
+  return requestJson(`${config.drawBaseUrl}/v1/images/generations`, {
+    method: 'POST',
+    headers: requestHeaders(apiKey),
+    body: JSON.stringify({
+      model: payload.model,
+      prompt,
+      n: 1,
+      size: payload.size,
+    }),
+    timeoutMs: 120_000,
+  });
+}
+
+function chatCompletionRequest(apiKey, payload, prompt) {
+  return requestJson(`${config.drawBaseUrl}/v1/chat/completions`, {
+    method: 'POST',
+    headers: requestHeaders(apiKey),
+    body: JSON.stringify({
+      model: payload.model,
+      stream: false,
+      messages: [
+        { role: 'system', content: 'You are a helpful image generation assistant. Return the generated image result.' },
+        { role: 'user', content: prompt },
+      ],
+    }),
+    timeoutMs: 120_000,
+  });
+}
+
 export function normalizeImagePayload(input = {}) {
   const prompt = String(input.prompt || '').trim();
   if (!prompt) {
@@ -203,34 +244,18 @@ export async function createImage(apiKey, payload) {
   if (!key) throw new Error('缺少 API Key，请在页面输入或配置 OPENAI_NEXT_API_KEY。');
 
   const prompt = buildImagePrompt(payload);
-  const upstreamPayload = {
-    model: payload.model,
-    prompt,
-    n: 1,
-    size: payload.size,
-  };
+  let response;
 
-  let response = await requestJson(`${config.drawBaseUrl}/v1/images/generations`, {
-    method: 'POST',
-    headers: requestHeaders(key),
-    body: JSON.stringify(upstreamPayload),
-    timeoutMs: 120_000,
-  });
-
-  if (!response.ok && shouldTryChatFallback(response)) {
-    response = await requestJson(`${config.drawBaseUrl}/v1/chat/completions`, {
-      method: 'POST',
-      headers: requestHeaders(key),
-      body: JSON.stringify({
-        model: payload.model,
-        stream: false,
-        messages: [
-          { role: 'system', content: 'You are a helpful image generation assistant. Return the generated image result.' },
-          { role: 'user', content: prompt },
-        ],
-      }),
-      timeoutMs: 120_000,
-    });
+  if (isChatFirstImageModel(payload.model)) {
+    response = await chatCompletionRequest(key, payload, prompt);
+    if (!response.ok && shouldTryImageFallback(response)) {
+      response = await imageGenerationRequest(key, payload, prompt);
+    }
+  } else {
+    response = await imageGenerationRequest(key, payload, prompt);
+    if (!response.ok && shouldTryChatFallback(response)) {
+      response = await chatCompletionRequest(key, payload, prompt);
+    }
   }
 
   if (!response.ok) {
