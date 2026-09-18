@@ -12,6 +12,18 @@ function normalizeDrawBaseUrl(value) {
     .replace(/\/v1$/i, '');
 }
 
+function normalizeOssEndpoint(value) {
+  return String(value || '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+}
+
+function normalizeBaseUrl(value) {
+  return String(value || '').trim().replace(/\/+$/, '');
+}
+
+function normalizeOssPrefix(value, fallback = '') {
+  return String(value || fallback).trim().replace(/^\/+|\/+$/g, '');
+}
+
 export const config = {
   port: Number(process.env.PORT || 8787),
   host: process.env.HOST || '127.0.0.1',
@@ -25,6 +37,34 @@ export const config = {
   openaiNextApiKey: process.env.OPENAI_NEXT_API_KEY || '',
   drawBaseUrl: normalizeDrawBaseUrl(process.env.DRAW_BASE_URL),
   imageModel: process.env.IMAGE_MODEL || 'gpt-image-2.5',
+  oss: {
+    accessKeyId: process.env.OSS_ACCESS_KEY_ID || '',
+    accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET || '',
+    securityToken: process.env.OSS_SECURITY_TOKEN || '',
+    bucket: process.env.OSS_BUCKET || '',
+    endpoint: normalizeOssEndpoint(process.env.OSS_ENDPOINT),
+    publicBaseUrl: normalizeBaseUrl(process.env.OSS_PUBLIC_BASE_URL),
+    imageUploadPrefix: normalizeOssPrefix(
+      process.env.OSS_IMAGE_UPLOAD_PREFIX,
+      process.env.OSS_UPLOAD_DIR || 'uploads/image-references',
+    ),
+    videoUploadPrefix: normalizeOssPrefix(
+      process.env.OSS_VIDEO_UPLOAD_PREFIX,
+      process.env.OSS_UPLOAD_DIR || 'uploads/video-references',
+    ),
+    maxFileSizeBytes: Math.min(
+      Math.max(Number(process.env.OSS_MAX_FILE_SIZE_MB || 512), 1),
+      5120,
+    ) * 1024 * 1024,
+    policyExpireSeconds: Math.min(
+      Math.max(Number(process.env.OSS_POLICY_EXPIRE_SECONDS || 300), 60),
+      3600,
+    ),
+    signedUrlExpireSeconds: Math.min(
+      Math.max(Number(process.env.OSS_SIGNED_URL_EXPIRE_SECONDS || 604800), 300),
+      604800,
+    ),
+  },
   webOrigin: process.env.WEB_ORIGIN || 'http://127.0.0.1:5180',
   nodeEnv: process.env.NODE_ENV || 'development',
   sessionCookieSecure: /^(1|true|yes|on)$/i.test(

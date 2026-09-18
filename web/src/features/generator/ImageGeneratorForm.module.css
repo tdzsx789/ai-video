@@ -16,6 +16,16 @@
   max-width: min(56%, 640px);
 }
 
+.imageDesignGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.imageDesignGrid > div:last-child {
+  grid-column: 1 / -1;
+}
+
 .imageParameterGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -211,6 +221,14 @@
 
   .imageParameterGrid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .imageDesignGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .imageDesignGrid > div:last-child {
+    grid-column: auto;
   }
 
   .imageParameterGrid > label:last-child {

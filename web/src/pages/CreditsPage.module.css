@@ -183,6 +183,76 @@
   margin-top: 17px;
 }
 
+.customRecharge {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 21, 17, 0.82);
+}
+
+.customRecharge.isSelected {
+  border-color: rgba(130, 229, 27, 0.72);
+  box-shadow: 0 0 28px rgba(130, 229, 27, 0.08);
+}
+
+.customRechargeHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.customRechargeHead h3 {
+  margin: 5px 0 0;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.customSelectButton {
+  flex: 0 0 auto;
+  min-height: 34px;
+}
+
+.customRechargeBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.6fr);
+  gap: 13px;
+  align-items: end;
+}
+
+.customAmountField input {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.customCreditPreview {
+  display: grid;
+  gap: 5px;
+  min-height: 67px;
+  align-content: center;
+  padding: 12px 13px;
+  border: 1px solid rgba(130, 229, 27, 0.24);
+  border-radius: 7px;
+  background: rgba(130, 229, 27, 0.07);
+}
+
+.customCreditPreview span,
+.customCreditPreview small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.customCreditPreview strong {
+  color: var(--lime);
+  font-family: var(--mono);
+  font-size: 17px;
+}
+
 .paymentPanel {
   position: sticky;
   top: 92px;
@@ -443,6 +513,11 @@
   min-height: 48px;
 }
 
+.paymentSubmit:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
 .paymentNote {
   display: flex;
   align-items: flex-start;
@@ -658,6 +733,10 @@
   .creditPlans {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .customRechargeBody {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 620px) {
@@ -673,6 +752,14 @@
 
   .creditPlan {
     min-height: 0;
+  }
+
+  .customRechargeHead {
+    display: grid;
+  }
+
+  .customSelectButton {
+    width: 100%;
   }
 
   .paymentPanel {

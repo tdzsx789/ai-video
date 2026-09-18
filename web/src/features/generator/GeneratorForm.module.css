@@ -3,6 +3,111 @@
   gap: 14px;
 }
 
+.creativeBriefPanel {
+  display: grid;
+  gap: 15px;
+  padding: 18px 19px;
+  border: 1px solid rgba(130, 229, 27, 0.27);
+  border-radius: 8px;
+  background: rgba(17, 21, 17, 0.72);
+}
+
+.creativeBriefHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.compactStepHeading p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.briefSummary {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(130, 229, 27, 0.4);
+  border-radius: 999px;
+  color: var(--lime);
+  background: rgba(130, 229, 27, 0.08);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.briefGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.briefCard {
+  display: grid;
+  align-content: space-between;
+  gap: 9px;
+  min-height: 104px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.045);
+  text-align: left;
+  cursor: pointer;
+}
+
+.briefCard:hover,
+.briefCard.isSelected {
+  border-color: rgba(130, 229, 27, 0.65);
+  background: rgba(130, 229, 27, 0.08);
+}
+
+.briefCard.isSelected {
+  box-shadow: inset 0 0 0 1px rgba(130, 229, 27, 0.28);
+}
+
+.briefCard span {
+  display: grid;
+  gap: 5px;
+}
+
+.briefCard strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.briefCard small {
+  overflow: hidden;
+  color: var(--text-soft);
+  font-size: 10px;
+  line-height: 1.38;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.briefCard em {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 9px;
+  font-style: normal;
+  line-height: 1.38;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.briefCard:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
 .quickSetupPanel {
   display: grid;
   gap: 6px;
@@ -18,8 +123,8 @@
 
 .quickSetupRow {
   display: grid;
-  grid-template-columns: 122px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 12px;
   align-items: center;
   min-width: 0;
 }
@@ -42,6 +147,14 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
+  min-width: 0;
+}
+
+.modelSetupGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.58fr);
+  gap: 8px;
+  align-items: center;
   min-width: 0;
 }
 
@@ -73,44 +186,14 @@
   box-shadow: 0 0 0 1px rgba(130, 229, 27, 0.3);
 }
 
-.toolOption:disabled,
-.modelSelectField select:disabled {
+.toolOption:disabled {
   cursor: not-allowed;
   opacity: 0.52;
 }
 
 .modelSelectField {
-  position: relative;
   display: block;
   min-width: 0;
-}
-
-.modelSelectField select {
-  width: 100%;
-  min-height: 30px;
-  padding: 0 32px 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  outline: 0;
-  color: var(--text);
-  background: rgba(7, 10, 7, 0.76);
-  font-size: 11px;
-  font-weight: 800;
-  appearance: none;
-}
-
-.modelSelectField select:focus {
-  border-color: rgba(130, 229, 27, 0.75);
-  box-shadow: 0 0 0 3px rgba(130, 229, 27, 0.1);
-}
-
-.modelSelectField svg {
-  position: absolute;
-  top: 50%;
-  right: 9px;
-  color: var(--lime);
-  pointer-events: none;
-  transform: translateY(-50%);
 }
 
 .promptSection {
@@ -166,9 +249,14 @@
 
 .promptLayout {
   display: grid;
-  grid-template-columns: minmax(0, 1.28fr) minmax(270px, 0.72fr);
+  grid-template-columns: minmax(0, 1.32fr) minmax(290px, 0.68fr);
   gap: 14px;
   align-items: start;
+}
+
+.promptColumn {
+  display: grid;
+  gap: 13px;
 }
 
 .promptField {
@@ -179,7 +267,7 @@
 }
 
 .promptField textarea {
-  min-height: 250px;
+  min-height: 220px;
 }
 
 .promptField small {
@@ -189,6 +277,99 @@
   color: var(--muted);
   font-family: var(--mono);
   font-size: 10px;
+}
+
+.designPresetGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.presetGroup {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(5, 7, 5, 0.45);
+}
+
+.presetGroupHeading {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.presetGroupHeading svg {
+  color: var(--lime);
+}
+
+.presetChipGrid {
+  display: grid;
+  grid-auto-columns: minmax(max-content, 1fr);
+  grid-auto-flow: column;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.presetChipGrid::-webkit-scrollbar {
+  display: none;
+}
+
+.presetChip {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.presetChip:hover,
+.presetChip.isSelected {
+  border-color: rgba(130, 229, 27, 0.62);
+  color: var(--lime);
+  background: rgba(130, 229, 27, 0.09);
+}
+
+.presetChip:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.promptPreview {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px dashed rgba(130, 229, 27, 0.28);
+  border-radius: 8px;
+  background: rgba(130, 229, 27, 0.045);
+}
+
+.promptPreview strong {
+  color: var(--lime);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.promptPreview p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-soft);
+  font-size: 11px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .videoFormFooter {
@@ -269,82 +450,73 @@
 }
 
 .parameterGrid,
-.referenceGrid,
+.materialGrid,
 .advancedGrid {
   display: grid;
   gap: 10px;
 }
 
-.parameterGrid,
-.referenceGrid,
-.advancedGrid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.referenceSection {
-  display: grid;
-  gap: 12px;
-  padding-top: 2px;
-}
-
-.referenceToggle {
+.materialPrompt {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 9px;
   width: 100%;
-  padding: 0;
-  border: 0;
-  color: var(--text);
-  background: transparent;
-  font: inherit;
+  min-width: 0;
+  padding: 10px;
+  border: 1px dashed rgba(130, 229, 27, 0.38);
+  border-radius: 7px;
+  color: var(--text-soft);
+  background: rgba(130, 229, 27, 0.045);
   text-align: left;
   cursor: pointer;
 }
 
-.referenceToggle:hover {
+.materialPrompt:hover {
+  border-color: rgba(130, 229, 27, 0.72);
+  color: var(--lime);
+  background: rgba(130, 229, 27, 0.09);
+}
+
+.materialPrompt > svg:first-child {
+  flex: 0 0 auto;
   color: var(--lime);
 }
 
-.referenceToggle:disabled {
-  cursor: not-allowed;
-  opacity: 0.52;
-}
-
-.referenceToggleMeta {
+.materialPrompt > span {
   display: grid;
-  gap: 3px;
+  flex: 1 1 auto;
   min-width: 0;
+  gap: 3px;
 }
 
-.referenceToggleMeta strong {
+.materialPrompt strong {
+  overflow-wrap: anywhere;
   font-size: 11px;
-  font-weight: 900;
 }
 
-.referenceToggleMeta small {
-  overflow: hidden;
+.materialPrompt small {
   color: var(--muted);
   font-size: 10px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.4;
 }
 
-.referenceToggleAction {
-  display: inline-flex;
+.materialPrompt > svg:last-child {
   flex: 0 0 auto;
-  align-items: center;
-  gap: 8px;
-}
-
-.referenceToggleAction svg {
   color: var(--lime);
-  transition: transform 0.18s ease;
+  transform: rotate(-90deg);
 }
 
-.referenceToggleAction svg.isExpanded {
-  transform: rotate(180deg);
+.parameterGrid,
+.materialGrid,
+.advancedGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.materialSection {
+  display: grid;
+  gap: 10px;
+  padding-top: 2px;
+  border-top: 1px solid var(--line);
 }
 
 .parameterGroupHeading {
@@ -376,9 +548,10 @@
   line-height: 1.5;
 }
 
-.referenceContent {
+.materialGrid {
   display: grid;
-  gap: 13px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
 }
 
 .toggleGrid {
@@ -386,16 +559,154 @@
   gap: 10px;
 }
 
-.referenceGrid input,
-.referenceGrid textarea,
 .advancedGrid input,
 .advancedGrid select {
   min-width: 0;
 }
 
-.referenceInput {
-  min-height: 68px;
-  resize: vertical;
+.assetUploadCard {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 7px;
+  background: rgba(5, 7, 5, 0.44);
+}
+
+.assetUploadCard.hasAsset {
+  border-style: solid;
+  border-color: rgba(130, 229, 27, 0.4);
+  background: rgba(130, 229, 27, 0.045);
+}
+
+.assetUploadHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.assetUploadTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text);
+  font-size: 11px;
+}
+
+.assetUploadTitle svg {
+  flex: 0 0 auto;
+  color: var(--lime);
+}
+
+.assetRemoveButton {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.assetRemoveButton:hover {
+  border-color: rgba(255, 114, 114, 0.65);
+  color: #ff8f8f;
+}
+
+.assetRemoveButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.assetUploadHint {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.assetUploadedMeta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 8px;
+  border-radius: 5px;
+  background: rgba(130, 229, 27, 0.08);
+}
+
+.assetUploadedMeta > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.assetUploadedMeta strong,
+.assetUploadedMeta small {
+  overflow-wrap: anywhere;
+}
+
+.assetUploadedMeta strong {
+  color: var(--text-soft);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.assetUploadedMeta small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.assetUploadedMeta > span {
+  flex: 0 0 auto;
+  color: var(--lime);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.assetUploadAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.assetUploadAction:hover {
+  border-color: rgba(130, 229, 27, 0.6);
+  color: var(--lime);
+  background: rgba(130, 229, 27, 0.08);
+}
+
+.assetUploadAction.isUploading,
+.assetUploadAction.isDisabled {
+  cursor: not-allowed;
+  opacity: 0.54;
+}
+
+.assetUploadInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
 }
 
 .advancedSection {
@@ -527,8 +838,23 @@
 
 @media (max-width: 1160px) {
   .quickSetupRow {
-    grid-template-columns: 116px minmax(0, 1fr);
+    grid-template-columns: 136px minmax(0, 1fr);
     gap: 9px;
+  }
+
+  .briefGrid {
+    grid-template-columns: repeat(5, minmax(118px, 1fr));
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .briefGrid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .modelSetupGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -542,9 +868,35 @@
     padding: 8px 16px;
   }
 
+  .creativeBriefPanel {
+    padding: 15px;
+  }
+
+  .creativeBriefHeader {
+    display: grid;
+  }
+
+  .briefSummary {
+    width: fit-content;
+  }
+
+  .briefGrid,
+  .designPresetGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .briefGrid {
+    grid-template-columns: repeat(5, minmax(124px, 1fr));
+    overflow-x: auto;
+  }
+
   .quickSetupRow {
-    grid-template-columns: 112px minmax(0, 1fr);
-    gap: 8px;
+    grid-template-columns: 1fr;
+    gap: 11px;
+  }
+
+  .toolSegment {
+    grid-template-columns: 1fr;
   }
 
   .promptSectionPrimary {
@@ -567,6 +919,7 @@
   }
 
   .promptLayout {
+    grid-template-columns: 1fr;
     gap: 12px;
   }
 
@@ -580,7 +933,7 @@
   }
 
   .parameterGrid,
-  .referenceGrid,
+  .materialGrid,
   .advancedGrid {
     grid-template-columns: 1fr;
   }

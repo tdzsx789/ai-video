@@ -1,8 +1,24 @@
 import { useState } from 'react';
-import { Check, ChevronDown, LoaderCircle, Sparkles, WandSparkles } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  Clapperboard,
+  FileAudio,
+  FileImage,
+  FileVideo,
+  ImagePlus,
+  LoaderCircle,
+  Settings2,
+  Sparkles,
+  Upload,
+  WandSparkles,
+  X,
+} from 'lucide-react';
 import SectionHeading from '../../components/SectionHeading.jsx';
+import SelectField from '../../components/SelectField.jsx';
 import StepBadge from '../../components/StepBadge.jsx';
 import { getModelLabel } from '../../lib/modelLabels.js';
+import { calculateVideoGenerationCost } from '../../lib/pricing.js';
 import { isVideoProviderEnabled } from '../../lib/videoProviders.js';
 import {
   getDurationOptions,
@@ -15,12 +31,85 @@ import styles from './GeneratorForm.module.css';
 
 const LEGACY_DURATION_OPTIONS = [4, 5, 6, 8, 10, 12, 15, 30];
 const LEGACY_RATIO_OPTIONS = ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9'];
-const VIDEO_GENERATION_COST = 30;
 const MODE_OPTIONS = [
-  { value: 'auto', label: 'AI 自动判断' },
+  { value: 'auto', label: '无素材创作' },
   { value: 'reference', label: '基于素材创作' },
   { value: 'edit', label: '视频编辑' },
   { value: 'extend', label: '视频延展' },
+];
+
+const CREATIVE_BRIEFS = [
+  {
+    id: 'none',
+    label: '无',
+    description: '完全按提示词执行',
+    hint: '不套用预设创作方向和输出偏好',
+    patch: {},
+  },
+  {
+    id: 'product',
+    label: '产品展示',
+    description: '突出材质、细节和卖点',
+    hint: '适合电商主图、广告短片、详情页动效',
+    patch: {
+      ratio: '16:9',
+      duration: 5,
+      generateAudio: false,
+      cameraFixed: false,
+    },
+  },
+  {
+    id: 'social',
+    label: '社媒短片',
+    description: '节奏更快，第一眼抓人',
+    hint: '适合小红书、抖音、竖版预告',
+    patch: {
+      ratio: '9:16',
+      duration: 6,
+      generateAudio: true,
+      cameraFixed: false,
+    },
+  },
+  {
+    id: 'brand',
+    label: '品牌氛围',
+    description: '画面更稳，重视高级感',
+    hint: '适合官网、品牌片和发布会视觉',
+    patch: {
+      ratio: '16:9',
+      duration: 8,
+      generateAudio: true,
+      cameraFixed: false,
+    },
+  },
+  {
+    id: 'story',
+    label: '故事镜头',
+    description: '强调人物、动作和情绪',
+    hint: '适合分镜预演、概念短片、片段测试',
+    patch: {
+      ratio: '21:9',
+      duration: 8,
+      generateAudio: true,
+      cameraFixed: false,
+    },
+  },
+];
+
+export const VISUAL_STYLE_OPTIONS = [
+  { id: 'none', label: '无', prompt: '' },
+  { id: 'cinematic', label: '电影质感', prompt: '电影级布光，浅景深，真实镜头语言，高级调色' },
+  { id: 'clean', label: '极简干净', prompt: '极简构图，干净背景，柔和自然光，画面留白克制' },
+  { id: 'commercial', label: '商业广告', prompt: '商业广告质感，产品细节清晰，高级棚拍光线，画面精致' },
+  { id: 'surreal', label: '超现实', prompt: '超现实视觉，强烈想象力，梦境般空间，细节丰富' },
+];
+
+export const MOTION_OPTIONS = [
+  { id: 'none', label: '无', prompt: '' },
+  { id: 'push-in', label: '缓慢推进', prompt: '镜头缓慢向前推进，运动平稳，有空间层次' },
+  { id: 'orbit', label: '环绕展示', prompt: '镜头围绕主体轻微环绕，突出体积、材质和轮廓' },
+  { id: 'static', label: '稳定定镜', prompt: '固定机位，构图稳定，主体动作自然，画面干净' },
+  { id: 'handheld', label: '轻微手持', prompt: '轻微手持镜头，带有真实记录感和呼吸感' },
 ];
 
 const ALL_AI_TOOLS = [
@@ -72,6 +161,105 @@ function getSelectedModel(tool, model) {
   return tool.models.find(item => modelKey(item) === model) || tool.models[0];
 }
 
+function selectedOptionLabel(options, id, fallback) {
+  return options.find(option => option.id === id)?.label || fallback;
+}
+
+function formatFileSize(size) {
+  const bytes = Number(size);
+  if (!bytes) return '';
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))}KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+}
+
+function assetIcon(assetType) {
+  if (assetType === 'video') return FileVideo;
+  if (assetType === 'audio') return FileAudio;
+  return FileImage;
+}
+
+function AssetUploadCard({
+  field,
+  label,
+  hint,
+  accept,
+  assetType,
+  value,
+  metadata,
+  disabled,
+  uploading,
+  onUpload,
+  onRemove,
+}) {
+  const Icon = assetIcon(assetType);
+  const inputId = `asset-upload-${field}`;
+  const hasValue = Boolean(String(value || '').trim());
+
+  return (
+    <div className={`${styles.assetUploadCard} ${hasValue ? styles.hasAsset : ''}`}>
+      <div className={styles.assetUploadHeading}>
+        <span className={styles.assetUploadTitle}>
+          <Icon size={15} />
+          <strong>{label}</strong>
+        </span>
+        {hasValue ? (
+          <button
+            type="button"
+            className={styles.assetRemoveButton}
+            onClick={onRemove}
+            disabled={disabled || uploading}
+            aria-label={`移除${label}`}
+            title={`移除${label}`}
+          >
+            <X size={14} />
+          </button>
+        ) : null}
+      </div>
+      <small className={styles.assetUploadHint}>{hint}</small>
+
+      {hasValue ? (
+        <div className={styles.assetUploadedMeta}>
+          <div>
+            <strong>{metadata?.name || '已添加素材'}</strong>
+            {metadata?.size ? <small>{formatFileSize(metadata.size)}</small> : null}
+          </div>
+          <span>已添加</span>
+        </div>
+      ) : null}
+
+      <label
+        className={`${styles.assetUploadAction} ${uploading ? styles.isUploading : ''} ${disabled ? styles.isDisabled : ''}`}
+        htmlFor={inputId}
+      >
+        {uploading ? <LoaderCircle className={shared.spin} size={15} /> : <Upload size={15} />}
+        <span>{uploading ? '上传中…' : hasValue ? '重新上传' : '选择文件'}</span>
+        <input
+          id={inputId}
+          className={styles.assetUploadInput}
+          type="file"
+          accept={accept}
+          disabled={disabled || uploading}
+          onChange={event => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            onUpload(file);
+          }}
+        />
+      </label>
+    </div>
+  );
+}
+
+export function composeVideoPrompt({ prompt, visualStyle = 'none', motionStyle = 'none' }) {
+  const base = String(prompt || '').trim();
+  const additions = [
+    VISUAL_STYLE_OPTIONS.find(option => option.id === visualStyle)?.prompt,
+    MOTION_OPTIONS.find(option => option.id === motionStyle)?.prompt,
+  ].filter(Boolean);
+  if (!base) return additions.join('，');
+  return additions.length ? `${base}\n\n创作要求：${additions.join('，')}` : base;
+}
+
 function ToggleRow({ label, description, checked, onChange, disabled }) {
   return (
     <label className={styles.toggleRow}>
@@ -96,9 +284,12 @@ export default function GeneratorForm({
   disabled,
   onGenerate,
   generating,
+  onUploadAsset,
+  onRemoveAsset,
+  uploadingAssets = {},
+  assetUploads = {},
 }) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [referenceOpen, setReferenceOpen] = useState(false);
   const selectedTool = getToolForModel(form.model);
   const selectedModel = getSelectedModel(selectedTool, form.model);
   const isSeedance = selectedTool.id === 'seedance';
@@ -136,19 +327,14 @@ export default function GeneratorForm({
     || form.referenceVideoUrl?.trim()
     || form.referenceAudioUrl?.trim(),
   );
-  const hasReferenceInput = Boolean(
-    form.firstFrameUrl?.trim()
-    || form.lastFrameUrl?.trim()
-    || form.referenceImageUrl?.trim()
-    || form.referenceVideoUrl?.trim()
-    || form.referenceAudioUrl?.trim(),
-  );
-  const referenceStatus = hasReferenceInput
-    ? modeRequiresVideo && !form.referenceVideoUrl?.trim() ? '需视频' : '已添加'
-    : isHailuo || modeRequiresVideo || mode === 'reference' ? '需要添加' : '可选';
+  const canChooseMode = isSeedance && capabilities.supportsOmniReferenceTaskType;
+  const showMaterialSection = isHailuo
+    || (canChooseMode ? mode !== 'auto' : isSeedance);
+  const hasUploadingAsset = Object.values(uploadingAssets).some(Boolean);
   const durationOptions = isSeedance || isHailuo
     ? getDurationOptions(capabilities)
     : LEGACY_DURATION_OPTIONS;
+  const estimatedCost = calculateVideoGenerationCost(form);
   const ratioOptions = isSeedance || isHailuo
     ? getRatioOptions(capabilities)
     : LEGACY_RATIO_OPTIONS;
@@ -165,20 +351,45 @@ export default function GeneratorForm({
       : []),
     ...(isHailuo && capabilities.supportsFastPretreatment ? [true] : []),
   ].filter(Boolean).length;
+  const selectedBrief = form.creativeBrief || 'none';
+  const selectedVisualStyle = form.visualStyle || 'none';
+  const selectedMotionStyle = form.motionStyle || 'none';
+  const finalPrompt = composeVideoPrompt({
+    prompt: form.prompt,
+    visualStyle: selectedVisualStyle,
+    motionStyle: selectedMotionStyle,
+  });
 
   const chooseTool = tool => {
     onChange(normalizeModelForm(form, modelKey(tool.models[0])));
   };
 
-  const chooseModel = event => {
-    onChange(normalizeModelForm(form, event.target.value));
+  const chooseModel = value => {
+    onChange(normalizeModelForm(form, value));
   };
 
-  const chooseMode = event => {
-    const nextMode = event.target.value;
+  const chooseMode = value => {
+    const nextMode = value;
     const updates = { omniReferenceTaskType: nextMode };
     if (nextMode === 'edit' || nextMode === 'extend') updates.ratio = 'adaptive';
     if (nextMode === 'edit') updates.duration = -1;
+    if (nextMode === 'auto') {
+      Object.assign(updates, {
+        firstFrameUrl: '',
+        lastFrameUrl: '',
+        referenceImageUrl: '',
+        referenceVideoUrl: '',
+        referenceAudioUrl: '',
+      });
+    }
+    if (nextMode === 'edit' || nextMode === 'extend') {
+      Object.assign(updates, {
+        firstFrameUrl: '',
+        lastFrameUrl: '',
+        referenceImageUrl: '',
+        referenceAudioUrl: '',
+      });
+    }
     onChange(updates);
   };
 
@@ -189,23 +400,73 @@ export default function GeneratorForm({
     });
   };
 
+  const chooseBrief = brief => {
+    if (brief.id === 'none') {
+      onChange({ creativeBrief: 'none' });
+      return;
+    }
+    const patch = { creativeBrief: brief.id, ...brief.patch };
+    const nextRatio = patch.ratio;
+    const ratioAvailable = !nextRatio || ratioOptions.includes(nextRatio);
+    const nextDuration = patch.duration;
+    const durationAvailable = !nextDuration || durationOptions.includes(nextDuration);
+    if (!ratioAvailable) delete patch.ratio;
+    if (!durationAvailable) delete patch.duration;
+    if (isEditing || isExtending) delete patch.ratio;
+    if (isEditing || isHailuo) delete patch.duration;
+    onChange(patch);
+  };
+
   return (
     <div className={styles.studioForm}>
-      <section className={styles.quickSetupPanel} id="studio" aria-label="视频基础设置">
-        <div className={styles.quickSetupRow}>
+      <section className={styles.creativeBriefPanel} id="studio" aria-label="视频创作方向">
+        <div className={styles.creativeBriefHeader}>
           <div className={styles.compactStepHeading}>
             <StepBadge value="01" />
             <div>
-              <div className={shared.sectionEyebrow}>AI TOOL</div>
-              <h2>选择工具</h2>
+              <div className={shared.sectionEyebrow}>CREATIVE BRIEF</div>
+              <h2>选择创作方向</h2>
+              <p>先定用途和节奏，再微调模型参数。</p>
+            </div>
+          </div>
+          <span className={styles.briefSummary}><Clapperboard size={14} /> {selectedOptionLabel(CREATIVE_BRIEFS, selectedBrief, '自定义创作')}</span>
+        </div>
+
+        <div className={styles.briefGrid} role="group" aria-label="选择视频创作用途">
+          {CREATIVE_BRIEFS.map(brief => (
+            <button
+              type="button"
+              key={brief.id}
+              className={`${styles.briefCard} ${selectedBrief === brief.id ? styles.isSelected : ''}`}
+              onClick={() => chooseBrief(brief)}
+              disabled={disabled}
+            >
+              <span>
+                <strong>{brief.label}</strong>
+                <small>{brief.description}</small>
+              </span>
+              <em>{brief.hint}</em>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.quickSetupPanel} aria-label="视频模型设置">
+        <div className={styles.quickSetupRow}>
+          <div className={styles.compactStepHeading}>
+            <StepBadge value="02" />
+            <div>
+              <div className={shared.sectionEyebrow}>MODEL</div>
+              <h2>模型与版本</h2>
             </div>
           </div>
 
-          <div className={styles.toolSegment} role="group" aria-label="选择 AI 工具">
-            {AI_TOOLS.map(tool => (
-              <button
-                type="button"
-                key={tool.id}
+          <div className={styles.modelSetupGrid}>
+            <div className={styles.toolSegment} role="group" aria-label="选择 AI 工具">
+              {AI_TOOLS.map(tool => (
+                <button
+                  type="button"
+                  key={tool.id}
                 className={`${styles.toolOption} ${selectedTool.id === tool.id ? styles.isSelected : ''}`}
                 onClick={() => chooseTool(tool)}
                 disabled={disabled}
@@ -213,29 +474,22 @@ export default function GeneratorForm({
                 <span>{tool.label}</span>
                 {selectedTool.id === tool.id ? <Check size={14} /> : null}
               </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className={styles.quickSetupPanel} aria-label="模型版本设置">
-        <div className={styles.quickSetupRow}>
-          <div className={styles.compactStepHeading}>
-            <StepBadge value="02" />
-            <div>
-              <div className={shared.sectionEyebrow}>MODEL VERSION</div>
-              <h2>选择版本</h2>
-            </div>
-          </div>
-
-          <label className={styles.modelSelectField}>
-            <select value={form.model} onChange={chooseModel} disabled={disabled}>
-              {selectedTool.models.map(model => (
-                <option key={modelKey(model)} value={modelKey(model)}>{modelLabel(model)}</option>
               ))}
-            </select>
-            <ChevronDown size={15} aria-hidden="true" />
-          </label>
+            </div>
+
+            <SelectField
+              className={styles.modelSelectField}
+              compact
+              value={form.model}
+              onChange={chooseModel}
+              disabled={disabled}
+              ariaLabel="选择视频模型版本"
+              options={selectedTool.models.map(model => ({
+                value: modelKey(model),
+                label: modelLabel(model),
+              }))}
+            />
+          </div>
         </div>
       </section>
 
@@ -243,14 +497,14 @@ export default function GeneratorForm({
         <div className={styles.promptSectionHead}>
           <SectionHeading
             step="03"
-            eyebrow="PROMPT & PARAMETERS"
+            eyebrow="SHOT DESIGN"
             title="描述你的镜头"
-            description="用具体的主体、动作、环境和镜头语言描述你想生成的画面。"
+            description="先写主体、动作和场景，再用风格与运镜预设补齐画面语言。"
             compact
           />
           <div className={styles.promptHeaderMeta}>
             <div className={styles.currentConfigStrip} aria-label="当前模型配置">
-              <span>{selectedTool.label} · {modelLabel(selectedModel)}</span>
+              <span>{selectedTool.label} · {modelLabel(selectedModel)} · {selectedOptionLabel(VISUAL_STYLE_OPTIONS, selectedVisualStyle, '自定义风格')}</span>
             </div>
           </div>
         </div>
@@ -258,16 +512,65 @@ export default function GeneratorForm({
         <div className={styles.promptLayout}>
           <div className={styles.promptColumn}>
             <label className={`${shared.fieldLabel} ${styles.promptField}`}>
-              <span>提示词</span>
+              <span>创作描述</span>
               <textarea
                 value={form.prompt}
                 onChange={event => onChange({ prompt: event.target.value })}
-                placeholder="请输入视频提示词，描述主体、动作、场景和镜头效果"
+                placeholder="例如：一支透明香水瓶立在湿润的黑色岩石上，水雾缓慢流动，瓶身折射出绿色光线"
                 disabled={disabled}
                 spellCheck="false"
               />
               <small>{form.prompt.length} / 2000</small>
             </label>
+
+            <div className={styles.designPresetGrid}>
+              <div className={styles.presetGroup}>
+                <div className={styles.presetGroupHeading}>
+                  <Settings2 size={14} />
+                  <span>视觉风格</span>
+                </div>
+                <div className={styles.presetChipGrid} role="group" aria-label="选择视觉风格">
+                  {VISUAL_STYLE_OPTIONS.map(option => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`${styles.presetChip} ${selectedVisualStyle === option.id ? styles.isSelected : ''}`}
+                      onClick={() => onChange({ visualStyle: option.id })}
+                      disabled={disabled}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.presetGroup}>
+                <div className={styles.presetGroupHeading}>
+                  <Clapperboard size={14} />
+                  <span>镜头节奏</span>
+                </div>
+                <div className={styles.presetChipGrid} role="group" aria-label="选择镜头节奏">
+                  {MOTION_OPTIONS.map(option => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`${styles.presetChip} ${selectedMotionStyle === option.id ? styles.isSelected : ''}`}
+                      onClick={() => onChange({ motionStyle: option.id })}
+                      disabled={disabled}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {finalPrompt ? (
+              <div className={styles.promptPreview}>
+                <strong>生成时会合并</strong>
+                <p>{finalPrompt}</p>
+              </div>
+            ) : null}
           </div>
 
           <div className={styles.parameterPanel}>
@@ -279,56 +582,76 @@ export default function GeneratorForm({
               <span className={styles.parameterStatus}>默认</span>
             </div>
 
-            {isSeedance && capabilities.supportsOmniReferenceTaskType ? (
-              <label className={shared.fieldLabel}>
-                <span>创作模式</span>
-                <select value={mode} onChange={chooseMode} disabled={disabled}>
-                  {MODE_OPTIONS.map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </label>
+            {canChooseMode ? (
+              <>
+                <label className={shared.fieldLabel}>
+                  <span>创作模式</span>
+                  <SelectField
+                    value={mode}
+                    onChange={chooseMode}
+                    disabled={disabled}
+                    ariaLabel="选择创作模式"
+                    options={MODE_OPTIONS}
+                  />
+                </label>
+                {mode === 'auto' ? (
+                  <button
+                    type="button"
+                    className={styles.materialPrompt}
+                    onClick={() => chooseMode('reference')}
+                    disabled={disabled}
+                  >
+                    <ImagePlus size={15} />
+                    <span>
+                      <strong>需要参考图或视频？</strong>
+                      <small>切换到基于素材创作，上传入口会显示在这里</small>
+                    </span>
+                    <ChevronDown size={15} />
+                  </button>
+                ) : null}
+              </>
             ) : null}
 
             <div className={styles.parameterGrid}>
               <label className={shared.fieldLabel}>
                 <span>{isHailuo ? '时长（版本固定）' : '时长'}</span>
-                <select
+                <SelectField
                   value={form.duration ?? 5}
-                  onChange={event => onChange({ duration: Number(event.target.value) })}
+                  onChange={value => onChange({ duration: Number(value) })}
                   disabled={disabled || Boolean(form.frames) || isEditing || isHailuo}
-                >
-                  {durationOptions.map(value => (
-                    <option key={value} value={value}>
-                      {value === -1 ? '自动（模型决定）' : `${value} 秒`}
-                    </option>
-                  ))}
-                </select>
+                  ariaLabel="选择视频时长"
+                  options={durationOptions.map(value => ({
+                    value,
+                    label: value === -1 ? '自动（模型决定）' : `${value} 秒`,
+                  }))}
+                />
               </label>
               <label className={shared.fieldLabel}>
                 <span>{isHailuo ? '分辨率（版本固定）' : '分辨率'}</span>
-                <select
+                <SelectField
                   value={form.resolution || '720P'}
-                  onChange={event => onChange({ resolution: event.target.value })}
+                  onChange={value => onChange({ resolution: value })}
                   disabled={disabled || Boolean(form.draft) || isHailuo}
-                >
-                  {(isSeedance || isHailuo ? capabilities.resolutions : ['480P', '720P', '1080P']).map(value => (
-                    <option key={value} value={value}>{value === '2K' ? '2K' : value.toLowerCase()}</option>
-                  ))}
-                </select>
+                  ariaLabel="选择视频分辨率"
+                  options={(isSeedance || isHailuo ? capabilities.resolutions : ['480P', '720P', '1080P']).map(value => ({
+                    value,
+                    label: value === '2K' ? '2K' : value.toLowerCase(),
+                  }))}
+                />
               </label>
               {ratioOptions.length ? (
                 <label className={shared.fieldLabel}>
                   <span>画幅比例</span>
-                  <select
+                  <SelectField
                     value={form.ratio || '16:9'}
-                    onChange={event => onChange({ ratio: event.target.value })}
+                    onChange={value => onChange({ ratio: value })}
                     disabled={disabled || isEditing || isExtending}
-                  >
-                    {ratioOptions.map(value => (
-                      <option key={value} value={value}>{value === 'adaptive' ? '跟随素材' : value}</option>
-                    ))}
-                  </select>
+                    ariaLabel="选择视频画幅比例"
+                    options={ratioOptions.map(value => ({
+                      value,
+                      label: value === 'adaptive' ? '跟随素材' : value,
+                    }))}
+                  />
                 </label>
               ) : null}
             </div>
@@ -366,110 +689,100 @@ export default function GeneratorForm({
               )}
             </div>
 
-            {isSeedance || isHailuo ? (
-              <div className={styles.referenceSection}>
-                <button
-                  type="button"
-                  className={styles.referenceToggle}
-                  onClick={() => setReferenceOpen(open => !open)}
-                  aria-expanded={referenceOpen}
-                  aria-controls="video-creative-material-options"
-                  disabled={disabled}
-                >
-                  <span className={styles.referenceToggleMeta}>
+            {showMaterialSection ? (
+              <div className={styles.materialSection}>
+                <div className={styles.parameterGroupHeading}>
+                  <div>
                     <strong>创作素材</strong>
-                    <small>帮助保持人物、场景和镜头连续</small>
-                  </span>
-                  <span className={styles.referenceToggleAction}>
-                    <span className={styles.parameterStatus}>{referenceStatus}</span>
-                    <ChevronDown className={referenceOpen ? styles.isExpanded : ''} size={17} />
-                  </span>
-                </button>
-
-                {referenceOpen ? (
-                  <div className={styles.referenceContent} id="video-creative-material-options">
-                    <p className={styles.parameterHint}>
+                    <small>
                       {isHailuo
-                        ? '海螺 2.3 Fast 官方接口为参考图生视频，需要添加一张首帧图片。'
+                        ? '海螺 2.3 Fast 需要上传首帧图片。'
                         : modeRequiresVideo
-                        ? '当前模式需要添加视频素材。'
-                        : isSeedance && capabilities.family === '2.0'
-                          ? '2.0 版本的参考音频需要搭配图片或视频素材。'
-                        : '首尾画面与创作素材请二选一；多个地址请每行填写一个。'}
-                    </p>
-
-                    {showFirstFrame || showLastFrame ? (
-                      <div className={styles.referenceGrid}>
-                        {showFirstFrame ? (
-                          <label className={shared.fieldLabel}>
-                            <span>首帧图片</span>
-                            <input
-                              type="url"
-                              value={form.firstFrameUrl || ''}
-                              onChange={event => onChange({ firstFrameUrl: event.target.value })}
-                              placeholder="https://…"
-                              disabled={disabled}
-                            />
-                          </label>
-                        ) : null}
-                        {showLastFrame ? (
-                          <label className={shared.fieldLabel}>
-                            <span>尾帧图片</span>
-                            <input
-                              type="url"
-                              value={form.lastFrameUrl || ''}
-                              onChange={event => onChange({ lastFrameUrl: event.target.value })}
-                              placeholder="https://…"
-                              disabled={disabled}
-                            />
-                          </label>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {showReferenceImages ? (
-                      <label className={shared.fieldLabel}>
-                        <span>图片素材</span>
-                        <textarea
-                          className={styles.referenceInput}
-                          rows="2"
-                          value={form.referenceImageUrl || ''}
-                          onChange={event => onChange({ referenceImageUrl: event.target.value })}
-                          placeholder="每行一个图片地址"
-                          disabled={disabled}
-                        />
-                      </label>
-                    ) : null}
-
-                    {showReferenceVideo ? (
-                      <label className={shared.fieldLabel}>
-                        <span>视频素材</span>
-                        <textarea
-                          className={styles.referenceInput}
-                          rows="2"
-                          value={form.referenceVideoUrl || ''}
-                          onChange={event => onChange({ referenceVideoUrl: event.target.value })}
-                          placeholder="每行一个视频地址"
-                          disabled={disabled}
-                        />
-                      </label>
-                    ) : null}
-
-                    {showReferenceAudio ? (
-                      <label className={shared.fieldLabel}>
-                        <span>音频素材</span>
-                        <textarea
-                          className={styles.referenceInput}
-                          rows="2"
-                          value={form.referenceAudioUrl || ''}
-                          onChange={event => onChange({ referenceAudioUrl: event.target.value })}
-                          placeholder="每行一个音频地址"
-                          disabled={disabled}
-                        />
-                      </label>
-                    ) : null}
+                          ? '当前模式需要上传一个视频素材。'
+                          : capabilities.family === '2.0'
+                            ? '参考音频需要搭配图片或视频素材。'
+                            : '素材会先上传到 OSS，再带入生成任务。'}
+                    </small>
                   </div>
-                ) : null}
+                </div>
+
+                <div className={styles.materialGrid}>
+                  {showFirstFrame ? (
+                    <AssetUploadCard
+                      field="firstFrameUrl"
+                      label="首帧图片"
+                      hint={isHailuo ? '必填，作为视频起始画面' : '可选，控制开场画面'}
+                      accept="image/*"
+                      assetType="image"
+                      value={form.firstFrameUrl}
+                      metadata={assetUploads.firstFrameUrl}
+                      disabled={disabled}
+                      uploading={Boolean(uploadingAssets.firstFrameUrl)}
+                      onUpload={file => onUploadAsset?.('firstFrameUrl', 'image', file)}
+                      onRemove={() => onRemoveAsset?.('firstFrameUrl')}
+                    />
+                  ) : null}
+                  {showLastFrame ? (
+                    <AssetUploadCard
+                      field="lastFrameUrl"
+                      label="尾帧图片"
+                      hint="可选，需要同时有首帧图片"
+                      accept="image/*"
+                      assetType="image"
+                      value={form.lastFrameUrl}
+                      metadata={assetUploads.lastFrameUrl}
+                      disabled={disabled}
+                      uploading={Boolean(uploadingAssets.lastFrameUrl)}
+                      onUpload={file => onUploadAsset?.('lastFrameUrl', 'image', file)}
+                      onRemove={() => onRemoveAsset?.('lastFrameUrl')}
+                    />
+                  ) : null}
+                  {showReferenceImages ? (
+                    <AssetUploadCard
+                      field="referenceImageUrl"
+                      label="图片素材"
+                      hint="人物、产品或场景参考"
+                      accept="image/*"
+                      assetType="image"
+                      value={form.referenceImageUrl}
+                      metadata={assetUploads.referenceImageUrl}
+                      disabled={disabled}
+                      uploading={Boolean(uploadingAssets.referenceImageUrl)}
+                      onUpload={file => onUploadAsset?.('referenceImageUrl', 'image', file)}
+                      onRemove={() => onRemoveAsset?.('referenceImageUrl')}
+                    />
+                  ) : null}
+                  {showReferenceVideo ? (
+                    <AssetUploadCard
+                      field="referenceVideoUrl"
+                      label="视频素材"
+                      hint={modeRequiresVideo ? '必填，用于编辑或延展' : '可选，参考动态和镜头'}
+                      accept="video/*"
+                      assetType="video"
+                      value={form.referenceVideoUrl}
+                      metadata={assetUploads.referenceVideoUrl}
+                      disabled={disabled}
+                      uploading={Boolean(uploadingAssets.referenceVideoUrl)}
+                      onUpload={file => onUploadAsset?.('referenceVideoUrl', 'video', file)}
+                      onRemove={() => onRemoveAsset?.('referenceVideoUrl')}
+                    />
+                  ) : null}
+                  {showReferenceAudio ? (
+                    <AssetUploadCard
+                      field="referenceAudioUrl"
+                      label="音频素材"
+                      hint="对白、音效或音乐参考"
+                      accept="audio/*"
+                      assetType="audio"
+                      value={form.referenceAudioUrl}
+                      metadata={assetUploads.referenceAudioUrl}
+                      disabled={disabled}
+                      uploading={Boolean(uploadingAssets.referenceAudioUrl)}
+                      onUpload={file => onUploadAsset?.('referenceAudioUrl', 'audio', file)}
+                      onRemove={() => onRemoveAsset?.('referenceAudioUrl')}
+                    />
+                  ) : null}
+                </div>
               </div>
             ) : null}
 
@@ -541,14 +854,16 @@ export default function GeneratorForm({
                       {capabilities.supportsOutputFormat ? (
                         <label className={shared.fieldLabel}>
                           <span>输出格式</span>
-                          <select
+                          <SelectField
                             value={form.outputFormat || 'mp4'}
-                            onChange={event => onChange({ outputFormat: event.target.value })}
+                            onChange={value => onChange({ outputFormat: value })}
                             disabled={disabled}
-                          >
-                            <option value="mp4">MP4（兼容性好）</option>
-                            <option value="mov">MOV（适合后期）</option>
-                          </select>
+                            ariaLabel="选择视频输出格式"
+                            options={[
+                              { value: 'mp4', label: 'MP4（兼容性好）' },
+                              { value: 'mov', label: 'MOV（适合后期）' },
+                            ]}
+                          />
                         </label>
                       ) : null}
                       {capabilities.supportsSeed ? (
@@ -599,15 +914,19 @@ export default function GeneratorForm({
             type="button"
             className={`${shared.submitButton} ${styles.videoSubmitButton}`}
             onClick={onGenerate}
-            disabled={generating || !hasCreativeInput}
+            disabled={generating || hasUploadingAsset || !hasCreativeInput}
           >
             {generating ? <LoaderCircle className={shared.spin} size={17} /> : <Sparkles size={17} />}
             {generating ? (
               '正在生成…'
+            ) : hasUploadingAsset ? (
+              '素材上传中…'
             ) : (
               <>
                 <span>生成视频</span>
-                <small className={styles.videoSubmitCost}>{VIDEO_GENERATION_COST} 积分</small>
+                <small className={styles.videoSubmitCost}>
+                  {estimatedCost === null ? '待配置计费' : `${estimatedCost} 积分`}
+                </small>
               </>
             )}
           </button>

@@ -9,18 +9,27 @@ import {
   ExternalLink,
   ScanSearch,
   ShieldCheck,
+  Sparkles,
+  WandSparkles,
 } from 'lucide-react';
 import AppHeader from '../components/AppHeader.jsx';
 import HistoryList from '../features/history/HistoryList.jsx';
-import GeneratorForm from '../features/generator/GeneratorForm.jsx';
-import ImageGeneratorForm from '../features/generator/ImageGeneratorForm.jsx';
+import GeneratorForm, { composeVideoPrompt } from '../features/generator/GeneratorForm.jsx';
+import ImageGeneratorForm, { composeImagePrompt } from '../features/generator/ImageGeneratorForm.jsx';
 import CreditsPage from './CreditsPage.jsx';
 import PricingInfoPage from './PricingInfoPage.jsx';
 import ProfilePage from './ProfilePage.jsx';
 import StatusBanner from '../components/StatusBanner.jsx';
 import TaskSummary from '../components/TaskSummary.jsx';
 import MediaPreviewModal from '../components/MediaPreviewModal.jsx';
-import { createImage, createVideoTask, deleteHistory, getHistory, queryVideoTask } from '../lib/api.js';
+import {
+  createImage,
+  createVideoTask,
+  deleteHistory,
+  getHistory,
+  queryVideoTask,
+  uploadFileToOss,
+} from '../lib/api.js';
 import { formatDate, getTaskStatus, getVideoUrl, TERMINAL_STATUSES } from '../lib/format.js';
 import { getModelLabel } from '../lib/modelLabels.js';
 import shared from '../styles/shared.module.css';
@@ -49,6 +58,9 @@ function initialForm() {
     returnLastFrame: false,
     generateAudio: true,
     ratio: '16:9',
+    creativeBrief: 'none',
+    visualStyle: 'none',
+    motionStyle: 'none',
     watermark: false,
     outputFormat: 'mp4',
     cameraFixed: false,
@@ -62,6 +74,10 @@ function initialImageForm() {
   return {
     model: 'gpt-image-2.5',
     prompt: '',
+    imageBrief: 'none',
+    imageStyle: 'none',
+    imageComposition: 'none',
+    imagePalette: 'none',
     size: 'auto',
     quality: 'auto',
     background: 'auto',
@@ -125,7 +141,7 @@ function previewMediaForHistoryItem(item) {
   };
 }
 
-function ImageResultPanel({ generating, requested, result, error, form, onCopy, onPreview }) {
+function ImageResultPanel({ generating, requested, result, error, form, onCopy, onPreview, onRegenerate, onUseAsVideoAsset }) {
   const imageUrl = result?.imageUrl || '';
   const hasImage = Boolean(imageUrl);
   const imageSize = result?.size || form.size || 'auto';
@@ -209,6 +225,14 @@ function ImageResultPanel({ generating, requested, result, error, form, onCopy, 
             <ScanSearch size={14} />
             放大预览
           </button>
+          <button className={shared.inlineAction} type="button" onClick={onRegenerate} disabled={generating}>
+            <Sparkles size={14} />
+            再来一版
+          </button>
+          <button className={shared.inlineAction} type="button" onClick={() => onUseAsVideoAsset?.(imageUrl)}>
+            <WandSparkles size={14} />
+            用作视频素材
+          </button>
           <a className={shared.inlineAction} href={imageUrl} download="ai-jinchan-image.png">
             <Download size={14} />
             下载图片
@@ -261,6 +285,10 @@ export default function StudioPage({
   const [task, setTask] = useState(null);
   const [previewMedia, setPreviewMedia] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
+  const [uploadingAssets, setUploadingAssets] = useState({});
+  const [assetUploads, setAssetUploads] = useState({});
+  const [assetFilter, setAssetFilter] = useState('all');
+  const [assetSearch, setAssetSearch] = useState('');
   const pollingRef = useRef(false);
   const recoveredTaskIdsRef = useRef(new Set());
 
@@ -273,7 +301,7 @@ export default function StudioPage({
       const response = await getHistory();
       setHistory(response.data || []);
     } catch (error) {
-      setStatusMessage(error.message || '读取历史记录失败。');
+      setStatusMessage(error.message || '读取资产库失败。');
     } finally {
       setHistoryLoading(false);
     }
@@ -295,6 +323,32 @@ export default function StudioPage({
     setImageForm(current => ({ ...current, ...values }));
   };
 
+  const uploadAsset = async (field, assetType, file) => {
+    if (!file) return;
+    setUploadingAssets(current => ({ ...current, [field]: true }));
+    setStatusMessage(`正在上传${assetType === 'image' ? '图片' : assetType === 'video' ? '视频' : '音频'}素材…`);
+
+    try {
+      const uploaded = await uploadFileToOss(file, assetType);
+      setForm(current => ({ ...current, [field]: uploaded.url }));
+      setAssetUploads(current => ({ ...current, [field]: uploaded }));
+      setStatusMessage('素材上传完成，可以继续生成。');
+    } catch (error) {
+      setStatusMessage(error.message || '素材上传失败，请稍后重试。');
+    } finally {
+      setUploadingAssets(current => ({ ...current, [field]: false }));
+    }
+  };
+
+  const removeAsset = field => {
+    setForm(current => ({ ...current, [field]: '' }));
+    setAssetUploads(current => {
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  };
+
   const syncCredits = response => {
     const balance = response?.balance ?? response?.credits?.balance ?? response?.data?.balance;
     if (Number.isFinite(Number(balance))) onCreditsChange?.(Number(balance));
@@ -311,6 +365,35 @@ export default function StudioPage({
 
   const openPreview = media => {
     if (media?.url) setPreviewMedia(media);
+  };
+
+  const reuseAsset = item => {
+    const mediaUrl = item?.kind === 'image' ? item.imageUrl : item.videoUrl;
+    if (!mediaUrl) return;
+
+    setForm(current => ({
+      ...current,
+      model: 'doubao-seedance-2-5-260628',
+      prompt: item.prompt || current.prompt,
+      omniReferenceTaskType: 'reference',
+      ...(item.kind === 'image'
+        ? {
+          referenceImageUrl: mediaUrl,
+          referenceVideoUrl: '',
+        }
+        : {
+          referenceVideoUrl: mediaUrl,
+          referenceImageUrl: '',
+        }),
+    }));
+    setAssetUploads(current => ({
+      ...current,
+      ...(item.kind === 'image'
+        ? { referenceImageUrl: { name: '资产库图片', size: 0, type: 'image/*', url: mediaUrl } }
+        : { referenceVideoUrl: { name: '资产库视频', size: 0, type: 'video/*', url: mediaUrl } }),
+    }));
+    onNavigate('video');
+    setStatusMessage(`已将${item.kind === 'image' ? '图片' : '视频'}素材带入视频创作。`);
   };
 
   const pollTask = useCallback(async (taskId, initialTask) => {
@@ -342,8 +425,8 @@ export default function StudioPage({
           pollingRef.current = false;
           if (['completed', 'succeeded'].includes(status)) {
             setStatusMessage(hasVideoUrl
-              ? '视频生成完成，地址已保存到历史记录。'
-              : '任务完成，但上游暂未返回视频地址。');
+              ? '视频生成完成，素材已保存到资产库。'
+              : '任务完成，但上游暂未返回视频素材地址。');
             await loadHistory();
           } else {
             setStatusMessage(`任务结束：${status}`);
@@ -419,7 +502,10 @@ export default function StudioPage({
     setStatusMessage('正在提交生成任务…');
 
     try {
-      const response = await createVideoTask(form, crypto.randomUUID());
+      const response = await createVideoTask({
+        ...form,
+        prompt: composeVideoPrompt(form),
+      }, crypto.randomUUID());
       syncCredits(response);
       const taskId = response.taskId || response.data?.id || response.data?.task_id || '';
       const initialTask = {
@@ -459,7 +545,10 @@ export default function StudioPage({
     setStatusMessage(`正在调用 ${getModelLabel(imageForm.model || 'gpt-image-2.5')} 生成图片…`);
 
     try {
-      const response = await createImage(imageForm, crypto.randomUUID());
+      const response = await createImage({
+        ...imageForm,
+        prompt: composeImagePrompt(imageForm),
+      }, crypto.randomUUID());
       syncCredits(response);
       setImageResult(response.result);
       setStatusMessage('图片生成完成。');
@@ -483,41 +572,85 @@ export default function StudioPage({
     setGenerating(false);
   };
 
+  const useImageResultAsVideoAsset = imageUrl => {
+    if (!imageUrl) return;
+    setForm(current => ({
+      ...current,
+      model: 'doubao-seedance-2-5-260628',
+      prompt: imageForm.prompt || current.prompt,
+      omniReferenceTaskType: 'reference',
+      referenceImageUrl: imageUrl,
+      referenceVideoUrl: '',
+    }));
+    setAssetUploads(current => ({
+      ...current,
+      referenceImageUrl: { name: '图片生成结果', size: 0, type: 'image/*', url: imageUrl },
+    }));
+    onNavigate('video');
+    setStatusMessage('已将图片结果带入视频创作。');
+  };
+
   const clearHistory = async () => {
-    if (!window.confirm('确定要清空当前账户的全部历史创作吗？')) return;
+    if (!window.confirm('确定要清空当前账户的全部创作资产吗？')) return;
     try {
       await deleteHistory();
       setHistory([]);
-      setStatusMessage('历史视频地址已清空。');
+      setStatusMessage('资产库已清空。');
     } catch (error) {
-      setStatusMessage(error.message || '清空历史失败。');
+      setStatusMessage(error.message || '清空资产库失败。');
     }
   };
 
   const visibleHistory = useMemo(() => history.slice(0, 3), [history]);
+  const filteredAssets = useMemo(() => {
+    const keyword = assetSearch.trim().toLowerCase();
+    return history.filter(item => {
+      const kind = item.kind === 'image' ? 'image' : 'video';
+      if (assetFilter !== 'all' && kind !== assetFilter) return false;
+      if (!keyword) return true;
+      return [
+        item.prompt,
+        item.model,
+        item.id,
+        item.videoUrl,
+        item.imageUrl,
+        item.status,
+      ].some(value => String(value || '').toLowerCase().includes(keyword));
+    });
+  }, [assetFilter, assetSearch, history]);
+  const assetCounts = useMemo(() => ({
+    total: history.length,
+    video: history.filter(item => item.kind !== 'image').length,
+    image: history.filter(item => item.kind === 'image').length,
+  }), [history]);
 
   const renderHistoryPage = () => (
     <div className={`${shared.pageStack} ${styles.historyPage}`}>
       <section className={shared.pageHeading}>
         <div>
-          <div className={shared.sectionEyebrow}>CREATION ARCHIVE</div>
-          <h1>历史记录</h1>
-          <p>所有完成的视频与图片任务都会自动归档，方便回看、复制地址和继续使用。</p>
+          <div className={shared.sectionEyebrow}>CREATIVE ASSETS</div>
+          <h1>资产库</h1>
+          <p>所有生成的视频和图片都会自动归档，作为后续项目的素材、参考和版本记录。</p>
         </div>
         <div className={styles.headingStat}>
           <Database size={17} />
-          <strong>{history.length}</strong>
-          <span>条创作记录</span>
+          <strong>{assetCounts.total}</strong>
+          <span>个素材资产</span>
         </div>
       </section>
       <HistoryList
-        items={history}
+        items={filteredAssets}
         loading={historyLoading}
         onRefresh={loadHistory}
         onClear={clearHistory}
         onCopy={copyText}
         onUseTask={manualPoll}
+        onReuse={reuseAsset}
         onPreview={openPreview}
+        filter={assetFilter}
+        onFilterChange={setAssetFilter}
+        search={assetSearch}
+        onSearchChange={setAssetSearch}
       />
     </div>
   );
@@ -532,6 +665,10 @@ export default function StudioPage({
             disabled={generating}
             onGenerate={generate}
             generating={generating}
+            onUploadAsset={uploadAsset}
+            onRemoveAsset={removeAsset}
+            uploadingAssets={uploadingAssets}
+            assetUploads={assetUploads}
           />
 
           {statusMessage || task?.id ? (
@@ -569,6 +706,7 @@ export default function StudioPage({
               onClear={clearHistory}
               onCopy={copyText}
               onUseTask={manualPoll}
+              onReuse={reuseAsset}
               onPreview={openPreview}
               compact
             />
@@ -627,6 +765,8 @@ export default function StudioPage({
           form={imageForm}
           onCopy={copyText}
           onPreview={openPreview}
+          onRegenerate={generateImage}
+          onUseAsVideoAsset={useImageResultAsVideoAsset}
         />
       </div>
     </div>

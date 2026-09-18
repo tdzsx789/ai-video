@@ -161,7 +161,7 @@
   line-height: 1.6;
 }
 
-.accountSecuritySummary > .bindingStatusSet {
+.accountSecurityActions .bindingStatusSet {
   flex: 0 0 auto;
   padding: 4px 7px;
   border: 1px solid rgba(130, 229, 27, 0.3);

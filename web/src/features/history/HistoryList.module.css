@@ -33,6 +33,108 @@
   gap: 7px;
 }
 
+.assetToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 13px;
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: rgba(5, 7, 5, 0.48);
+}
+
+.assetFilters {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.assetFilterButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.assetFilterButton:hover,
+.assetFilterButton.isSelected {
+  border-color: rgba(130, 229, 27, 0.62);
+  color: var(--lime);
+  background: rgba(130, 229, 27, 0.09);
+}
+
+.assetSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(420px, 100%);
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--muted);
+  background: rgba(7, 10, 7, 0.76);
+}
+
+.assetSearch:focus-within {
+  border-color: rgba(130, 229, 27, 0.75);
+  box-shadow: 0 0 0 3px rgba(130, 229, 27, 0.1);
+}
+
+.assetSearch input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  background: transparent;
+  font-size: 12px;
+}
+
+.assetSearch input::placeholder {
+  color: #657064;
+}
+
+.assetStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.assetStats > div {
+  display: grid;
+  gap: 4px;
+  min-height: 62px;
+  align-content: center;
+  padding: 11px 13px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.assetStats strong {
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 20px;
+}
+
+.assetStats span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .iconButton {
   display: inline-grid;
   flex: 0 0 auto;
@@ -68,6 +170,11 @@
   gap: 10px;
 }
 
+.assetGrid {
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  align-items: stretch;
+}
+
 .historyEmpty {
   display: grid;
   min-height: 150px;
@@ -84,5 +191,22 @@
 @media (max-width: 620px) {
   .historyPanel {
     padding: 15px;
+  }
+
+  .historyPanelHeader,
+  .assetToolbar {
+    display: grid;
+  }
+
+  .assetSearch {
+    width: 100%;
+  }
+
+  .assetStats {
+    grid-template-columns: 1fr;
+  }
+
+  .assetGrid {
+    grid-template-columns: 1fr;
   }
 }

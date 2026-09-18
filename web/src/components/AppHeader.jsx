@@ -12,8 +12,8 @@ import styles from './AppHeader.module.css';
 const navItems = [
   { id: 'video', label: '视频创作', icon: Video },
   { id: 'image', label: '图片创作', icon: Image },
-  { id: 'history', label: '历史记录', icon: Clock3 },
-  { id: 'credits', label: '积分中心', icon: Coins },
+  { id: 'history', label: '资产库', icon: Clock3 },
+  { id: 'credits', label: '充值中心', icon: Coins },
   { id: 'profile', label: '用户中心', icon: UserRound },
   { id: 'pricing', label: '费用说明', icon: ReceiptText },
 ];

@@ -11,7 +11,7 @@ import {
 import { createVideoTask, resolveApiKey } from '../services/seedanceClient.js';
 import { normalizeVideoPayload } from '../services/payload.js';
 import { extractTaskId, isTerminalTaskStatus, taskToRecord } from '../services/taskMapper.js';
-import { GENERATION_COSTS } from '../services/pricing.js';
+import { GENERATION_COSTS, calculateVideoGenerationCost } from '../services/pricing.js';
 import { syncVideoTask } from '../services/videoTaskSync.js';
 import { requireAuth } from '../middleware/auth.js';
 import { httpError } from '../utils/httpError.js';
@@ -90,12 +90,18 @@ videoRouter.post('/generate', async (req, res, next) => {
       code: 'GENERATION_SERVICE_NOT_CONFIGURED',
     });
     const idempotencyKey = requiredIdempotencyKey(req);
+    const creditCost = calculateVideoGenerationCost(payload);
+    if (creditCost === null) {
+      throw httpError(400, '当前视频版本暂未配置计费规则，请切换版本后重试。', {
+        code: 'PRICING_RULE_NOT_CONFIGURED',
+      });
+    }
     const reserve = await reserveGeneration({
       userId: req.user.id,
       kind: 'video',
       model: payload.model,
       prompt: payload.prompt || payload.content?.[0]?.text || '',
-      creditCost: GENERATION_COSTS.video,
+      creditCost,
       payload,
       idempotencyKey,
     });

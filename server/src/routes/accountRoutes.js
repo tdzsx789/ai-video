@@ -42,8 +42,8 @@ accountRouter.get('/credit-records', async (req, res, next) => {
 
 accountRouter.post('/recharge', async (req, res, next) => {
   try {
-    const plan = getRechargePlan(req.body?.planId);
-    if (!plan) throw httpError(400, '充值套餐无效。', { code: 'INVALID_RECHARGE_PLAN' });
+    const plan = getRechargePlan(req.body?.planId, { amount: req.body?.amount });
+    if (!plan) throw httpError(400, '充值金额无效，最低 10 元。', { code: 'INVALID_RECHARGE_PLAN' });
     const paymentMethod = ['wechat', 'alipay', 'card'].includes(req.body?.paymentMethod)
       ? req.body.paymentMethod
       : 'wechat';

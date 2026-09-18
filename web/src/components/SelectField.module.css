@@ -1,0 +1,168 @@
+.selectField {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-width: 0;
+}
+
+.selectField.isOpen {
+  z-index: 40;
+}
+
+.selectTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  outline: 0;
+  color: var(--text);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.055), transparent 58%),
+    rgba(7, 10, 7, 0.86);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.selectTrigger:hover {
+  border-color: var(--line-strong);
+  background:
+    linear-gradient(135deg, rgba(130, 229, 27, 0.09), transparent 58%),
+    rgba(7, 10, 7, 0.94);
+}
+
+.selectTrigger:focus-visible,
+.selectField.isOpen .selectTrigger {
+  border-color: rgba(130, 229, 27, 0.78);
+  box-shadow: 0 0 0 3px rgba(130, 229, 27, 0.12);
+}
+
+.selectTrigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.selectTrigger svg {
+  flex: 0 0 auto;
+  color: var(--lime);
+  transition: transform 0.18s ease;
+}
+
+.selectTrigger .chevronOpen {
+  transform: rotate(180deg);
+}
+
+.selectedLabel {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selectedLabel.placeholder {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.compact .selectTrigger {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+.compact .selectTrigger svg {
+  width: 15px;
+  height: 15px;
+}
+
+.selectMenu {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  left: 0;
+  display: grid;
+  gap: 3px;
+  max-height: 280px;
+  padding: 5px;
+  overflow-y: auto;
+  border: 1px solid rgba(130, 229, 27, 0.34);
+  border-radius: 8px;
+  background: rgba(16, 22, 16, 0.98);
+  box-shadow:
+    0 18px 36px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(18px);
+  z-index: 60;
+}
+
+.selectMenu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.selectMenu::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(206, 222, 205, 0.23);
+}
+
+.selectOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-soft);
+  background: transparent;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.14s ease, background 0.14s ease, border-color 0.14s ease;
+}
+
+.selectOption span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.selectOption:hover,
+.selectOption.isActive {
+  border-color: rgba(130, 229, 27, 0.24);
+  color: var(--text);
+  background: rgba(130, 229, 27, 0.1);
+}
+
+.selectOption.isSelected {
+  border-color: rgba(130, 229, 27, 0.4);
+  color: var(--lime);
+  background: rgba(130, 229, 27, 0.14);
+}
+
+.selectOption.isSelected:hover,
+.selectOption.isSelected.isActive {
+  border-color: rgba(130, 229, 27, 0.62);
+  background: rgba(130, 229, 27, 0.18);
+}
+
+.selectOption svg {
+  flex: 0 0 auto;
+}
+
+.selectOption:disabled {
+  cursor: not-allowed;
+  color: var(--muted);
+  opacity: 0.42;
+}

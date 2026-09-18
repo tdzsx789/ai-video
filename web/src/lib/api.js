@@ -74,11 +74,11 @@ export function getCreditRecords(limit = 20) {
   return request(`/api/account/credit-records?limit=${encodeURIComponent(limit)}`);
 }
 
-export function recharge(planId, idempotencyKey, paymentMethod = 'wechat') {
+export function recharge(planId, idempotencyKey, paymentMethod = 'wechat', amount) {
   return request('/api/account/recharge', {
     method: 'POST',
     headers: { 'Idempotency-Key': idempotencyKey },
-    body: JSON.stringify({ planId, paymentMethod }),
+    body: JSON.stringify({ planId, paymentMethod, amount }),
   });
 }
 
@@ -111,4 +111,38 @@ export function queryVideoTask(taskId) {
     method: 'POST',
     body: JSON.stringify({}),
   });
+}
+
+export function createOssUploadPolicy({ filename, contentType, size, assetType }) {
+  return request('/api/uploads/oss-policy', {
+    method: 'POST',
+    body: JSON.stringify({ filename, contentType, size, assetType }),
+  });
+}
+
+export async function uploadFileToOss(file, assetType) {
+  const uploadResponse = await fetch('/api/uploads/oss', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': file.type || 'application/octet-stream',
+      'X-Upload-Asset-Type': assetType,
+      'X-Upload-Filename': encodeURIComponent(file.name),
+      'X-Upload-Size': String(file.size),
+    },
+    body: file,
+  });
+  const response = await parseResponse(uploadResponse);
+  const upload = response.upload;
+
+  if (!upload?.url) {
+    throw new Error('OSS 上传成功，但没有返回素材地址。');
+  }
+
+  return {
+    url: upload.fileUrl || upload.url,
+    name: file.name,
+    size: file.size,
+    type: file.type,
+  };
 }

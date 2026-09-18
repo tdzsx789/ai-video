@@ -19,31 +19,36 @@ import styles from './CreditsPage.module.css';
 
 const PLANS = [
   {
-    id: 'starter',
-    name: '尝鲜包',
-    credits: 300,
-    price: 9.9,
-    description: '适合第一次体验 AI 创作',
+    id: 'cny10',
+    name: '基础充值',
+    credits: 1000,
+    price: 10,
+    description: '适合快速补充余额，开始一次轻量创作',
     icon: Sparkles,
   },
   {
-    id: 'creator',
-    name: '创作者包',
-    credits: 1200,
-    price: 29.9,
-    description: '日常创作的平衡选择',
+    id: 'cny50',
+    name: '常用充值',
+    credits: 5000,
+    price: 50,
+    description: '适合日常图片和视频创作',
     icon: Zap,
     featured: true,
   },
   {
-    id: 'studio',
-    name: '工作室包',
-    credits: 5000,
-    price: 99,
-    description: '连续产出，单价更划算',
+    id: 'cny100',
+    name: '高频充值',
+    credits: 10000,
+    price: 100,
+    description: '适合高频生成和团队测试',
     icon: Gem,
   },
 ];
+
+const CUSTOM_PLAN_ID = 'custom';
+const MIN_CUSTOM_AMOUNT = 10;
+const CREDITS_PER_YUAN = 100;
+const AMOUNT_PATTERN = /^\d+(?:\.\d{1,2})?$/;
 
 const PAYMENT_METHODS = [
   {
@@ -81,6 +86,7 @@ const LEDGER_TYPE_LABELS = {
 };
 
 const PLAN_LABELS = Object.fromEntries(PLANS.map(plan => [plan.id, plan.name]));
+PLAN_LABELS[CUSTOM_PLAN_ID] = '自定义充值';
 
 function formatPrice(price) {
   return `¥${Number(price).toFixed(2)}`;
@@ -104,15 +110,33 @@ function rechargeStatusLabel(value) {
 }
 
 export default function CreditsPage({ credits, onRecharge }) {
-  const [selectedPlanId, setSelectedPlanId] = useState('creator');
+  const [selectedPlanId, setSelectedPlanId] = useState('cny50');
+  const [customAmount, setCustomAmount] = useState('10');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('wechat');
   const [recordTab, setRecordTab] = useState('ledger');
   const [records, setRecords] = useState({ ledger: [], recharges: [] });
   const [recordsLoading, setRecordsLoading] = useState(true);
   const [recordsError, setRecordsError] = useState('');
-  const selectedPlan = PLANS.find(plan => plan.id === selectedPlanId) || PLANS[1];
+  const customAmountText = String(customAmount).trim();
+  const parsedCustomAmount = Number(customAmountText);
+  const customAmountValid = AMOUNT_PATTERN.test(customAmountText)
+    && Number.isFinite(parsedCustomAmount)
+    && parsedCustomAmount >= MIN_CUSTOM_AMOUNT;
+  const customCredits = customAmountValid ? Math.round(parsedCustomAmount * CREDITS_PER_YUAN) : 0;
+  const selectedBasePlan = PLANS.find(plan => plan.id === selectedPlanId) || PLANS[1];
+  const selectedPlan = selectedPlanId === CUSTOM_PLAN_ID
+    ? {
+      id: CUSTOM_PLAN_ID,
+      name: '自定义充值',
+      credits: customCredits,
+      price: customAmountValid ? parsedCustomAmount : 0,
+      amount: customAmount,
+      icon: CreditCard,
+    }
+    : selectedBasePlan;
   const SelectedPlanIcon = selectedPlan.icon;
   const selectedPaymentLabel = PAYMENT_LABELS[selectedPaymentMethod] || PAYMENT_LABELS.wechat;
+  const canRecharge = selectedPlanId !== CUSTOM_PLAN_ID || customAmountValid;
 
   const loadRecords = async () => {
     setRecordsLoading(true);
@@ -144,9 +168,9 @@ export default function CreditsPage({ credits, onRecharge }) {
     <div className={`${shared.pageStack} ${styles.creditsPage}`}>
       <section className={`${shared.pageHeading} ${shared.pageHeadingCompact}`}>
         <div>
-          <div className={shared.sectionEyebrow}>CREDITS CENTER</div>
-          <h1>积分中心</h1>
-          <p>充值、查看余额和追踪每一笔积分变化。</p>
+          <div className={shared.sectionEyebrow}>RECHARGE CENTER</div>
+          <h1>充值中心</h1>
+          <p>充值积分、查看余额和追踪每一笔账户变化。固定比例为 1 元 = 100 积分。</p>
         </div>
         <div className={styles.balanceHero}>
           <span><Coins size={16} /> 当前余额</span>
@@ -162,7 +186,7 @@ export default function CreditsPage({ credits, onRecharge }) {
               <div className={shared.panelKicker}>CREDIT PACKAGES</div>
               <h2>选择充值套餐</h2>
             </div>
-            <span>一次性到账 · 永久有效</span>
+            <span>1 元 = 100 积分 · 最低 10 元</span>
           </div>
 
           <div className={styles.creditPlans}>
@@ -193,6 +217,42 @@ export default function CreditsPage({ credits, onRecharge }) {
               );
             })}
           </div>
+
+          <section className={`${styles.customRecharge} ${selectedPlanId === CUSTOM_PLAN_ID ? styles.isSelected : ''}`} aria-label="自定义充值金额">
+            <div className={styles.customRechargeHead}>
+              <div>
+                <div className={shared.panelKicker}>CUSTOM AMOUNT</div>
+                <h3>自定义金额</h3>
+              </div>
+              <button
+                type="button"
+                className={`${selectedPlanId === CUSTOM_PLAN_ID ? shared.primaryAction : shared.secondaryAction} ${styles.customSelectButton}`}
+                onClick={() => setSelectedPlanId(CUSTOM_PLAN_ID)}
+              >
+                {selectedPlanId === CUSTOM_PLAN_ID ? <Check size={15} /> : <Coins size={15} />}
+                {selectedPlanId === CUSTOM_PLAN_ID ? '已选择' : '选择自定义'}
+              </button>
+            </div>
+            <div className={styles.customRechargeBody}>
+              <label className={`${shared.fieldLabel} ${styles.customAmountField}`}>
+                <span>充值金额</span>
+                <input
+                  type="number"
+                  min={MIN_CUSTOM_AMOUNT}
+                  step="0.01"
+                  value={customAmount}
+                  onFocus={() => setSelectedPlanId(CUSTOM_PLAN_ID)}
+                  onChange={event => setCustomAmount(event.target.value)}
+                  placeholder="至少 10 元"
+                />
+              </label>
+              <div className={styles.customCreditPreview}>
+                <span>预计到账</span>
+                <strong>{customCredits.toLocaleString('zh-CN')} 积分</strong>
+                <small>{customAmountValid ? `${formatPrice(parsedCustomAmount)} × ${CREDITS_PER_YUAN}` : '最低充值 10 元'}</small>
+              </div>
+            </div>
+          </section>
         </section>
 
         <aside className={styles.paymentPanel} aria-label="充值订单摘要">
@@ -270,6 +330,7 @@ export default function CreditsPage({ credits, onRecharge }) {
             type="button"
             className={`${shared.primaryAction} ${styles.paymentSubmit}`}
             onClick={handleRecharge}
+            disabled={!canRecharge}
           >
             <Zap size={16} />
             确认充值
@@ -277,7 +338,7 @@ export default function CreditsPage({ credits, onRecharge }) {
 
           <p className={styles.paymentNote}>
             <ShieldCheck size={14} />
-            <span>当前为演示支付，确认后积分会即时入账。</span>
+            <span>确认支付后积分会即时入账，自定义金额最低 10 元。</span>
           </p>
         </aside>
       </div>
@@ -287,7 +348,7 @@ export default function CreditsPage({ credits, onRecharge }) {
           <div>
             <div className={shared.panelKicker}>ACCOUNT HISTORY</div>
             <h2>账户记录</h2>
-            <p>充值订单和创作扣费统一记录在积分中心。</p>
+            <p>充值订单和创作扣费统一记录在充值中心。</p>
           </div>
           <button
             type="button"

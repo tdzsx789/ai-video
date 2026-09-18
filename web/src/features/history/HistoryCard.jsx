@@ -1,10 +1,10 @@
-import { Clipboard, ExternalLink, Film, Image, LoaderCircle, Play, RotateCcw, ScanSearch } from 'lucide-react';
+import { Clipboard, ExternalLink, Film, Image, LoaderCircle, Play, RotateCcw, ScanSearch, WandSparkles } from 'lucide-react';
 import { formatDate, formatDuration, statusLabel, statusTone } from '../../lib/format.js';
 import { getModelLabel } from '../../lib/modelLabels.js';
 import shared from '../../styles/shared.module.css';
 import styles from './HistoryCard.module.css';
 
-export default function HistoryCard({ item, onCopy, onUseTask, onPreview }) {
+export default function HistoryCard({ item, onCopy, onUseTask, onReuse, onPreview, assetMode = false }) {
   const isImage = item.kind === 'image';
   const mediaUrl = isImage ? item.imageUrl : item.videoUrl;
   const media = mediaUrl ? {
@@ -25,8 +25,12 @@ export default function HistoryCard({ item, onCopy, onUseTask, onPreview }) {
         ? styles.dotDanger
         : styles.dotNeutral;
   return (
-    <article className={styles.historyCard}>
+    <article className={`${styles.historyCard} ${assetMode ? styles.assetCard : ''}`}>
       <div className={styles.historyThumbnail}>
+        <span className={styles.assetTypeBadge}>
+          {isImage ? <Image size={12} /> : <Film size={12} />}
+          {isImage ? '图片' : '视频'}
+        </span>
         {media ? (
           <button
             type="button"
@@ -57,8 +61,10 @@ export default function HistoryCard({ item, onCopy, onUseTask, onPreview }) {
       </div>
       <div className={styles.historyCardBody}>
         <div className={styles.historyCardHeading}>
-          <span className={`${styles.statusDot} ${dotClass}`} />
-          <span>{statusLabel(item.status)}</span>
+          <span className={styles.statusPill}>
+            <span className={`${styles.statusDot} ${dotClass}`} />
+            {statusLabel(item.status)}
+          </span>
           <span className={styles.historyDate}>{formatDate(item.finishedAt || item.createdAt || item.savedAt)}</span>
         </div>
         <p className={styles.historyPrompt}>{item.prompt || '未记录提示词'}</p>
@@ -69,43 +75,93 @@ export default function HistoryCard({ item, onCopy, onUseTask, onPreview }) {
           <span title={item.id}>{item.id?.slice(0, 16) || '无任务编号'}</span>
         </div>
         <div className={styles.historyCardActions}>
-          {isImage && item.imageUrl ? (
-            <>
-              <button className={shared.inlineAction} type="button" onClick={() => onPreview?.(media)}>
-                <ScanSearch size={14} />
-                预览图片
-              </button>
-              <a className={shared.inlineAction} href={item.imageUrl} target="_blank" rel="noreferrer">
-                <ExternalLink size={14} />
-                打开原图
-              </a>
-              <button className={shared.inlineAction} type="button" onClick={() => onCopy(item.imageUrl)}>
-                <Clipboard size={14} />
-                复制地址
-              </button>
-            </>
-          ) : item.videoUrl ? (
-            <>
-              <button className={shared.inlineAction} type="button" onClick={() => onPreview?.(media)}>
-                <ScanSearch size={14} />
-                预览视频
-              </button>
-              <a className={shared.inlineAction} href={item.videoUrl} target="_blank" rel="noreferrer">
-                <ExternalLink size={14} />
-                打开原视频
-              </a>
-              <button className={shared.inlineAction} type="button" onClick={() => onCopy(item.videoUrl)}>
-                <Clipboard size={14} />
-                复制地址
-              </button>
-            </>
-          ) : null}
-          {!isImage && item.id ? (
-            <button className={shared.inlineAction} type="button" onClick={() => onUseTask(item.id)}>
-              <RotateCcw size={14} />
-              继续查询
+          {assetMode && media ? (
+            <button className={styles.assetPrimaryAction} type="button" onClick={() => onPreview?.(media)}>
+              <ScanSearch size={15} />
+              预览素材
             </button>
           ) : null}
+          <div className={styles.assetSecondaryActions}>
+            {!assetMode && media ? (
+              <button className={shared.inlineAction} type="button" onClick={() => onPreview?.(media)}>
+                <ScanSearch size={14} />
+                预览素材
+              </button>
+            ) : null}
+            {isImage && item.imageUrl ? (
+              <>
+                <a
+                  className={assetMode ? styles.assetIconAction : shared.inlineAction}
+                  href={item.imageUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="打开原图"
+                  aria-label="打开原图"
+                >
+                  <ExternalLink size={14} />
+                  {!assetMode ? '打开原图' : null}
+                </a>
+                <button
+                  className={assetMode ? styles.assetIconAction : shared.inlineAction}
+                  type="button"
+                  onClick={() => onCopy(item.imageUrl)}
+                  title="复制地址"
+                  aria-label="复制地址"
+                >
+                  <Clipboard size={14} />
+                  {!assetMode ? '复制地址' : null}
+                </button>
+              </>
+            ) : item.videoUrl ? (
+              <>
+                <a
+                  className={assetMode ? styles.assetIconAction : shared.inlineAction}
+                  href={item.videoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="打开原视频"
+                  aria-label="打开原视频"
+                >
+                  <ExternalLink size={14} />
+                  {!assetMode ? '打开原视频' : null}
+                </a>
+                <button
+                  className={assetMode ? styles.assetIconAction : shared.inlineAction}
+                  type="button"
+                  onClick={() => onCopy(item.videoUrl)}
+                  title="复制地址"
+                  aria-label="复制地址"
+                >
+                  <Clipboard size={14} />
+                  {!assetMode ? '复制地址' : null}
+                </button>
+              </>
+            ) : null}
+            {media ? (
+              <button
+                className={assetMode ? styles.assetIconAction : shared.inlineAction}
+                type="button"
+                onClick={() => onReuse?.(item)}
+                title="用于创作"
+                aria-label="用于创作"
+              >
+                <WandSparkles size={14} />
+                {!assetMode ? '用于创作' : null}
+              </button>
+            ) : null}
+            {!isImage && item.id && !item.videoUrl ? (
+              <button
+                className={assetMode ? styles.assetIconAction : shared.inlineAction}
+                type="button"
+                onClick={() => onUseTask(item.id)}
+                title="继续查询"
+                aria-label="继续查询"
+              >
+                <RotateCcw size={14} />
+                {!assetMode ? '继续查询' : null}
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
     </article>

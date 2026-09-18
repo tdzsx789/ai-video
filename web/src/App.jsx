@@ -100,10 +100,10 @@ export default function App() {
 
   const handleRecharge = async (plan, paymentMethod = 'wechat') => {
     try {
-      const response = await recharge(plan.id, crypto.randomUUID(), paymentMethod);
+      const response = await recharge(plan.id, crypto.randomUUID(), paymentMethod, plan.amount ?? plan.price);
       setCredits(Number(response.balance || 0));
       const paymentLabel = PAYMENT_METHOD_LABELS[paymentMethod] || PAYMENT_METHOD_LABELS.wechat;
-      showToast(`已模拟通过${paymentLabel}充值 ${plan.credits.toLocaleString('zh-CN')} 积分。`);
+      showToast(`已通过${paymentLabel}充值 ${plan.credits.toLocaleString('zh-CN')} 积分。`);
       return response;
     } catch (error) {
       showToast(error.message || '充值失败。');

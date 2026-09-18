@@ -13,7 +13,7 @@ import {
   normalizeImagePayload,
 } from '../services/imageClient.js';
 import { resolveApiKey } from '../services/seedanceClient.js';
-import { GENERATION_COSTS } from '../services/pricing.js';
+import { GENERATION_COSTS, calculateImageGenerationCost } from '../services/pricing.js';
 import { requireAuth } from '../middleware/auth.js';
 import { httpError } from '../utils/httpError.js';
 
@@ -70,12 +70,18 @@ imageRouter.post('/generate', async (req, res, next) => {
     if (!isImageModelAvailable(payload.model)) {
       throw imageModelUnavailableError(payload.model);
     }
+    const creditCost = calculateImageGenerationCost(payload);
+    if (creditCost === null) {
+      throw httpError(400, '当前图片版本暂未配置计费规则，请切换版本后重试。', {
+        code: 'PRICING_RULE_NOT_CONFIGURED',
+      });
+    }
     const reserve = await reserveGeneration({
       userId: req.user.id,
       kind: 'image',
       model: payload.model,
       prompt: payload.prompt,
-      creditCost: GENERATION_COSTS.image,
+      creditCost,
       payload,
       idempotencyKey,
     });

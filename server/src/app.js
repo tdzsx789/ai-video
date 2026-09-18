@@ -9,6 +9,7 @@ import { accountRouter } from './routes/accountRoutes.js';
 import { historyRouter } from './routes/historyRoutes.js';
 import { imageRouter } from './routes/imageRoutes.js';
 import { modelRouter } from './routes/modelRoutes.js';
+import { uploadRouter } from './routes/uploadRoutes.js';
 import { videoRouter } from './routes/videoRoutes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -36,6 +37,7 @@ export function createApp() {
   app.use('/api/history', historyRouter);
   app.use('/api/images', imageRouter);
   app.use('/api/models', modelRouter);
+  app.use('/api/uploads', uploadRouter);
   app.use('/api', videoRouter);
 
   app.use(express.static(webDist));

@@ -20,8 +20,8 @@
 .studioLayout,
 .imageLayout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 425px);
-  gap: 27px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  gap: 22px;
   align-items: start;
 }
 

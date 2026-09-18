@@ -1,6 +1,5 @@
-import { Coins, Image, Info, ShieldCheck, Sparkles, Video } from 'lucide-react';
+import { Coins, Image, Info, Video } from 'lucide-react';
 import { useState } from 'react';
-import { getModelLabel } from '../lib/modelLabels.js';
 import { isImageProviderEnabled } from '../lib/imageProviders.js';
 import { isVideoProviderEnabled } from '../lib/videoProviders.js';
 import shared from '../styles/shared.module.css';
@@ -8,89 +7,61 @@ import styles from './PricingInfoPage.module.css';
 
 const ALL_VIDEO_PRICING = [
   {
-    type: '文生视频',
+    platform: 'seedance',
     model: 'doubao-seedance-2-5-260628',
-    version: getModelLabel('doubao-seedance-2-5-260628'),
-    unit: '每次生成',
-    credits: 68,
-    specs: '720p / 5 秒起',
-    note: '画质优先，适合正式素材和镜头成片。',
+    version: 'doubao-seedance-2-5-260628',
+    unit: '每秒',
+    credits: 100,
+    specs: '视频时长 5 秒起',
+    note: '按实际生成时长计费。',
   },
   {
-    type: '文生视频',
+    platform: 'seedance',
     model: 'doubao-seedance-2-0-fast-260128',
-    version: getModelLabel('doubao-seedance-2-0-fast-260128'),
-    unit: '每次生成',
-    credits: 36,
-    specs: '720p / 5 秒起',
-    note: '速度优先，适合快速验证提示词和镜头方向。',
+    version: 'doubao-seedance-2-0-fast-260128',
+    unit: '每秒',
+    credits: 80,
+    specs: '视频时长 5 秒起',
+    note: '按实际生成时长计费。',
   },
   {
-    type: '文生视频',
+    platform: 'seedance',
     model: 'doubao-seedance-2-0-mini-260615',
-    version: getModelLabel('doubao-seedance-2-0-mini-260615'),
-    unit: '每次生成',
-    credits: 22,
-    specs: '480p / 4 秒起',
-    note: '低成本预览，适合批量试错。',
+    version: 'doubao-seedance-2-0-mini-260615',
+    unit: '每秒',
+    credits: 40,
+    specs: '视频时长 5 秒起',
+    note: '按实际生成时长计费。',
   },
   {
-    type: '参考图生视频',
-    model: 'doubao-seedance-2-5-260628',
-    version: 'seedance 2.5 参考图',
-    unit: '每次生成',
-    credits: 88,
-    specs: '首帧/尾帧参考',
-    note: '带参考素材时消耗更高，适合控制主体一致性。',
-  },
-  {
-    type: '参考音视频生成',
-    model: 'doubao-seedance-2-5-260628',
-    version: 'seedance 2.5 多模态参考',
-    unit: '每次生成',
-    credits: 108,
-    specs: '图片 / 视频 / 音频参考',
-    note: '多参考素材任务，适合复杂运动和声音方向控制。',
-  },
-  {
-    type: '视频生成',
-    provider: 'kling',
-    model: 'kling-v2-6-video-pro',
-    version: getModelLabel('kling-v2-6-video-pro'),
-    unit: '每次生成',
-    credits: 96,
-    specs: '专业版 / 10 秒',
-    note: '第三方视频模型 mock 计费，后续按实际供应商调整。',
-  },
-  {
-    type: '参考图生视频',
+    platform: '海螺',
     provider: 'hailuo',
     model: 'MiniMax-Hailuo-2.3-Fast/768p/6s',
-    version: getModelLabel('MiniMax-Hailuo-2.3-Fast/768p/6s'),
-    unit: '每次生成',
-    credits: 58,
-    specs: '768P / 6 秒',
-    note: '需提供首帧图片，时长和分辨率由版本固定。',
+    version: 'MiniMax-Hailuo-2.3-Fast/768p/6s',
+    unit: '每次',
+    credits: 200,
+    specs: '固定 6 秒',
+    note: '按官网固定时长按次计费。',
   },
   {
-    type: '参考图生视频',
+    platform: '海螺',
     provider: 'hailuo',
     model: 'MiniMax-Hailuo-2.3-Fast/768p/10s',
-    version: getModelLabel('MiniMax-Hailuo-2.3-Fast/768p/10s'),
-    unit: '每次生成',
-    credits: 58,
-    specs: '768P / 10 秒',
-    note: '需提供首帧图片，时长和分辨率由版本固定。',
+    version: 'MiniMax-Hailuo-2.3-Fast/768p/10s',
+    unit: '每次',
+    credits: 300,
+    specs: '固定 10 秒',
+    note: '按官网固定时长按次计费。',
   },
   {
-    type: '参考图生视频',
+    platform: '海螺',
     provider: 'hailuo',
     model: 'MiniMax-Hailuo-2.3-Fast/1080p/6s',
-    version: getModelLabel('MiniMax-Hailuo-2.3-Fast/1080p/6s'),
-    unit: '每次生成',
-    credits: 58,
-    specs: '1080P / 6 秒',
-    note: '需提供首帧图片，时长和分辨率由版本固定。',
+    version: 'MiniMax-Hailuo-2.3-Fast/1080p/6s',
+    unit: '每次',
+    credits: 300,
+    specs: '固定 6 秒',
+    note: '按官网固定时长按次计费。',
   },
 ];
 
@@ -100,41 +71,22 @@ const VIDEO_PRICING = ALL_VIDEO_PRICING.filter(item => (
 
 const ALL_IMAGE_PRICING = [
   {
-    type: '文生图片',
+    platform: 'gpt-image',
     model: 'gpt-image-2.5',
-    version: 'gpt-image 2.5',
-    unit: '每张图片',
-    credits: 12,
-    specs: '标准质量 / 1 张',
-    note: '适合日常概念图、配图和产品视觉草稿。',
+    version: 'gpt-image-2.5',
+    unit: '每次',
+    credits: 20,
+    specs: '每次生成 1 张',
+    note: '按次计费。',
   },
   {
-    type: '文生图片',
+    platform: 'gpt-image',
     model: 'gpt-image-2.5-sunburst',
-    version: 'gpt-image 2.5 Sunburst',
-    unit: '每张图片',
-    credits: 18,
-    specs: '高细节 / 1 张',
-    note: '适合更强光影、更高质感的视觉探索。',
-  },
-  {
-    type: '文生图片',
-    provider: 'gemini-nano-banana',
-    model: 'gemini-2.5-flash-image',
-    version: getModelLabel('gemini-2.5-flash-image'),
-    unit: '每张图片',
-    credits: 12,
-    specs: '标准质量 / 1 张',
-    note: '适合快速生成概念图、角色设定和视觉草稿。',
-  },
-  {
-    type: '图片重试',
-    model: 'gpt-image-2.5',
-    version: '同提示词重新生成',
-    unit: '每张图片',
-    credits: 10,
-    specs: '同参数重试',
-    note: '同一任务短时间内重试可使用优惠消耗。',
+    version: 'gpt-image-2.5-sunburst',
+    unit: '每次',
+    credits: 50,
+    specs: '每次生成 1 张',
+    note: '按次计费。',
   },
 ];
 
@@ -149,7 +101,6 @@ const PRICING_VIEWS = {
     description: '视频生成收费',
     icon: Video,
     items: VIDEO_PRICING,
-    range: '22 - 108 积分 / 次',
   },
   image: {
     label: '图片生成',
@@ -157,12 +108,11 @@ const PRICING_VIEWS = {
     description: '图片生成收费',
     icon: Image,
     items: IMAGE_PRICING,
-    range: '10 - 18 积分 / 张',
   },
 };
 
 function chargeUnitLabel(unit) {
-  return String(unit || '').replace('每次生成', '次').replace('每张图片', '张');
+  return String(unit || '');
 }
 
 function PricingTable({ title, description, icon: Icon, items }) {
@@ -178,7 +128,7 @@ function PricingTable({ title, description, icon: Icon, items }) {
 
       <div className={styles.tableShell}>
         <div className={styles.tableHeader}>
-          <span>生成类型</span>
+          <span>平台类型</span>
           <span>版本</span>
           <span>规格</span>
           <span>消耗</span>
@@ -186,10 +136,10 @@ function PricingTable({ title, description, icon: Icon, items }) {
         </div>
         <div className={styles.tableBody}>
           {items.map(item => (
-            <article key={`${item.type}-${item.model}-${item.version}`} className={styles.pricingRow}>
+            <article key={`${item.platform}-${item.model}`} className={styles.pricingRow}>
               <div>
-                <small>生成类型</small>
-                <strong>{item.type}</strong>
+                <small>平台类型</small>
+                <strong>{item.platform}</strong>
               </div>
               <div>
                 <small>版本</small>
@@ -215,19 +165,14 @@ function PricingTable({ title, description, icon: Icon, items }) {
 export default function PricingInfoPage() {
   const [activeType, setActiveType] = useState('video');
   const activePricing = PRICING_VIEWS[activeType];
-  const ActiveIcon = activePricing.icon;
 
   return (
     <div className={`${shared.pageStack} ${styles.pricingPage}`}>
-      <section className={`${shared.pageHeading} ${shared.pageHeadingCompact}`}>
+      <section className={shared.pageHeading}>
         <div>
           <div className={shared.sectionEyebrow}>PRICING RULES</div>
           <h1>费用说明</h1>
-          <p>下面是当前用于产品调试的 mock 计费规则。正式上线前，建议由后端统一返回并锁定每次任务的实际扣费。</p>
-        </div>
-        <div className={styles.mockBadge}>
-          <Sparkles size={16} />
-          <span>Mock 数据</span>
+          <p>这里用于说明不同平台和版本的积分消耗。Seedance 视频版本按实际生成秒数计费，视频时长均从 5 秒起；海螺视频版本按官网固定时长按次计费；图片版本按每次生成计费。实际扣费以提交任务时后端锁定的平台、版本和参数为准，生成失败、上游拒绝、任务取消或未返回有效作品时，本次预扣积分会自动退回。</p>
         </div>
       </section>
 
@@ -251,24 +196,6 @@ export default function PricingInfoPage() {
         })}
       </div>
 
-      <div className={styles.summaryGrid}>
-        <div className={styles.summaryCard}>
-          <ActiveIcon size={18} />
-          <span>当前分类</span>
-          <strong>{activePricing.label}</strong>
-        </div>
-        <div className={styles.summaryCard}>
-          <Coins size={18} />
-          <span>Mock 消耗区间</span>
-          <strong>{activePricing.range}</strong>
-        </div>
-        <div className={styles.summaryCard}>
-          <ShieldCheck size={18} />
-          <span>失败返还</span>
-          <strong>失败任务自动退回</strong>
-        </div>
-      </div>
-
       <PricingTable
         title={activePricing.title}
         description={activePricing.description}
@@ -280,7 +207,7 @@ export default function PricingInfoPage() {
         <Info size={18} />
         <div>
           <h2>计费口径说明</h2>
-          <p>积分消耗以后端创建任务时锁定的价格为准。任务提交失败、上游失败、取消、过期，或完成但没有返回有效作品地址时，系统应通过积分账本幂等退回本次预扣积分。</p>
+          <p>Seedance 按秒计费，实际消耗 = 视频时长 × 对应版本的每秒积分；海螺按版本固定时长按次计费，不额外按秒折算；图片按次计费。系统会先预扣本次任务积分，任务成功后完成结算；如果提交失败、上游生成失败、任务取消、过期，或最终没有可用的视频/图片地址，预扣积分会通过账本自动返还，重复提交同一请求也会按请求编号避免重复扣费。</p>
         </div>
       </section>
     </div>
